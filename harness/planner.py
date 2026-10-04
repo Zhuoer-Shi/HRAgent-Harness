@@ -100,16 +100,24 @@ class Planner:
         tools_prompt: str = "",
         observations: Optional[List[str]] = None,
         parent_span_id: Optional[str] = None,
+        history_text: str = "",
+        retrieval_text: str = "",
+        system_prompt: Optional[str] = None,
     ) -> Tuple[PlanStep, List[Dict[str, Any]]]:
         """
         产出下一步动作。
         返回 (PlanStep, 修复记录)；失败时抛 PlanError。
+
+        M2：新增 history_text / retrieval_text / system_prompt，
+        内容由 ContextManager 按预算组装后传入，planner 不再自己拼装上下文。
         """
         slots = slots or {}
         observations = observations or []
         repairs: List[Dict[str, Any]] = []
 
-        prompt = self._build_prompt(user_input, slots, tools_prompt, observations)
+        prompt = self._build_prompt(
+            user_input, slots, tools_prompt, observations, history_text, retrieval_text
+        )
         last_error = ""
 
         for attempt in range(self.max_repair + 1):
@@ -117,7 +125,7 @@ class Planner:
             if last_error:
                 user_msg += f"\n\n[上一次输出被拒绝] 原因: {last_error}\n请修正后重新只输出一个 JSON 对象。"
 
-            text = self._call_llm(user_msg, parent_span_id)
+            text = self._call_llm(user_msg, parent_span_id, system_prompt or SYSTEM_PROMPT)
             try:
                 step = self._parse_and_validate(text)
             except PlanError as e:
@@ -140,19 +148,24 @@ class Planner:
 
     # ---------- 内部 ----------
 
-    def _call_llm(self, user_msg: str, parent_span_id: Optional[str]) -> str:
+    def _call_llm(
+        self,
+        user_msg: str,
+        parent_span_id: Optional[str],
+        system_prompt: str = SYSTEM_PROMPT,
+    ) -> str:
         if self.tracer is not None:
             with self.tracer.span(
                 "llm", "planner.decide", parent_id=parent_span_id, input_text=user_msg[:200]
             ) as sp:
-                result = self.llm.complete(SYSTEM_PROMPT, user_msg)
+                result = self.llm.complete(system_prompt, user_msg)
                 self.tracer.end_span(
                     sp,
                     output_text=result.text[:200],
                     tokens=result.total_tokens,
                 )
                 return result.text
-        result = self.llm.complete(SYSTEM_PROMPT, user_msg)
+        result = self.llm.complete(system_prompt, user_msg)
         return result.text
 
     @staticmethod
@@ -161,11 +174,17 @@ class Planner:
         slots: Dict[str, Any],
         tools_prompt: str,
         observations: List[str],
+        history_text: str = "",
+        retrieval_text: str = "",
     ) -> str:
         parts = [
             "【可用工具清单】\n" + (tools_prompt or "（无）"),
             "\n【已收集信息】\n" + (json.dumps(slots, ensure_ascii=False) if slots else "（空）"),
         ]
+        if history_text:
+            parts.append("\n【历史对话】\n" + history_text)
+        if retrieval_text:
+            parts.append("\n【检索片段】\n" + retrieval_text)
         if observations:
             parts.append("\n【已执行步骤与结果】\n" + "\n".join(f"{i+1}. {o}" for i, o in enumerate(observations)))
         parts.append("\n【用户最新输入】\n" + user_input)

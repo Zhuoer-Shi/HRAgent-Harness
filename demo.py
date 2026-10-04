@@ -43,6 +43,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--live", action="store_true", help="使用 DeepSeek 真实模型")
     ap.add_argument("--trace", action="store_true", help="打印完整 Trace 时间线")
+    ap.add_argument("--context", action="store_true", help="打印上下文预算占用账本（M2）")
     args = ap.parse_args()
 
     mode = "deepseek" if args.live else "stub"
@@ -66,6 +67,12 @@ def main() -> int:
             print(f"调用工具: {result.tools_called}")
         if result.pending_tool:
             print(f"挂起待确认: {result.pending_tool} {result.pending_args}")
+
+        # M2：上下文预算账本
+        if args.context:
+            pkg = getattr(runner, "last_context_package", None)
+            if pkg is not None:
+                print(pkg.to_text())
 
         # 先取出本轮 Trace（含 gate span），确认动作会另起一条 Trace
         trace_text = ""

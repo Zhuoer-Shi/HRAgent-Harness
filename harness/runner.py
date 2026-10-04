@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-会话主循环 —— 把注册表、规划器、Trace、门控串起来。
+会话主循环 —— 把注册表、规划器、上下文、状态机、Trace、门控串起来。
 
 对应 PRD：
-- 5.5 会话状态机
+- 5.4 上下文分区预算（M2）
+- 5.5 会话状态机（M2）
 - 5.6 Trace
 - FR-003 / FR-007 / FR-008 高风险动作的人工确认门控
 - FR-009 工具失败重试一次
@@ -12,34 +13,42 @@
 关键设计：**门控在框架层强制，不依赖模型自觉。**
 即使模型直接输出 CALL_TOOL 去调用高风险工具，runner 也会把它拦下来转成待确认状态。
 这是"受控"二字的落点 —— 评测时可以验证"模型想违规也违规不了"。
+
+M2 相对 M1 的两处变化：
+1. 上下文不再"固定塞 top_k 个工具"，改由 ContextManager 按分区预算组装与裁剪，
+   每次运行都产出可度量的账本（占用率 / 注入工具 / 裁剪工具 / 历史压缩条数）。
+2. 会话状态不再是散落的 `session.state = XXX`，改由 SessionState 按显式转移表推进，
+   非法转移直接抛错。
 """
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from .context import Budget, ContextManager, ContextPackage
 from .llm import BaseLLM
 from .planner import (
     ACTION_ASK_USER,
     ACTION_CALL_TOOL,
     ACTION_FINISH,
     ACTION_REQUEST_CONFIRM,
+    SYSTEM_PROMPT,
     Planner,
     PlanError,
 )
+from .state import (
+    S_AWAITING_CONFIRMATION,
+    S_AWAITING_INPUT,
+    S_DONE,
+    S_EXECUTING,
+    S_FAILED,
+    S_INTENT_RESOLVED,
+    S_PLANNING,
+    SessionState,
+)
 from .tool_registry import RISK_HIGH, ToolRegistry
 from .tracer import SPAN_GATE, SPAN_PLAN, SPAN_RESPOND, SPAN_RUN, SPAN_TOOL, Tracer
-
-# 会话状态（PRD 5.5）
-S_IDLE = "IDLE"
-S_PLANNING = "PLANNING"
-S_EXECUTING = "EXECUTING"
-S_AWAITING_INPUT = "AWAITING_INPUT"
-S_AWAITING_CONFIRMATION = "AWAITING_CONFIRMATION"
-S_DONE = "DONE"
-S_FAILED = "FAILED"
 
 # 一轮交互的结束状态
 STATUS_DONE = "done"
@@ -60,20 +69,7 @@ class TurnResult:
     pending_args: Optional[Dict[str, Any]] = None
     error: str = ""
     trace_summary: Dict[str, Any] = field(default_factory=dict)
-
-
-class Session:
-    """一次会话的槽位与历史（M2 会抽出独立状态机模块，这里先内置）。"""
-
-    def __init__(self, session_id: Optional[str] = None) -> None:
-        self.session_id = session_id or ("s-" + uuid.uuid4().hex[:8])
-        self.state: str = S_IDLE
-        self.slots: Dict[str, Any] = {}
-        self.history: List[Dict[str, str]] = []
-        self.observations: List[str] = []
-
-    def add(self, role: str, content: str) -> None:
-        self.history.append({"role": role, "content": content})
+    context_report: Dict[str, Any] = field(default_factory=dict)
 
 
 class AgentRunner:
@@ -83,15 +79,18 @@ class AgentRunner:
         registry: ToolRegistry,
         max_steps: int = 6,
         auto_confirm: bool = False,
-        tool_top_k: int = 5,
+        budget: Optional[Budget] = None,
+        session: Optional[SessionState] = None,
     ) -> None:
         self.llm = llm
         self.registry = registry
         self.planner = Planner(llm, registry)
         self.max_steps = max_steps
         self.auto_confirm = auto_confirm
-        self.tool_top_k = tool_top_k
-        self.session = Session()
+        self.budget = budget or Budget()
+        self.context = ContextManager(registry, self.budget)
+        self.session = session or SessionState()
+        self.last_context_package: Optional[ContextPackage] = None
 
     # ---------- 对外主入口 ----------
 
@@ -100,28 +99,55 @@ class AgentRunner:
         self._last_tracer = tracer
         self.planner.tracer = tracer
         session = self.session
-        session.add("user", user_input)
-        session.state = S_PLANNING
+        session.add_message("user", user_input)
 
         root = tracer.start_span(SPAN_RUN, "run", input_text=user_input)
         tools_called: List[str] = []
 
-        # 按意图只注入相关工具（上下文预算，PRD 5.4）
-        tools_prompt = self.registry.to_prompt(
-            self.registry.select_for_intent(user_input, top_k=self.tool_top_k)
+        # ---- M2：上下文按分区预算组装（替代 M1 的固定 top-k 注入）----
+        pkg = self.context.build(
+            user_input=user_input,
+            slots=session.slots,
+            history=session.history[:-1],   # 刚加进来的这条用户输入不再重复计入历史
+            observations=session.observations,
+            system_prompt=SYSTEM_PROMPT,
         )
+        self.last_context_package = pkg
+
+        ctx_span = tracer.start_span(
+            SPAN_PLAN,
+            "context.build",
+            parent_id=root.span_id,
+            input_text=user_input,
+            meta={"budget": pkg.to_report()},
+        )
+        tracer.end_span(
+            ctx_span,
+            output_text=(
+                f"注入 {len(pkg.selected_tools)} 个工具"
+                + (f"，裁剪 {len(pkg.dropped_tools)} 个" if pkg.dropped_tools else "")
+            ),
+            tokens=pkg.total_tokens,
+        )
+
+        # 工具筛选完成 = 意图解析完成（PRD 5.5：IDLE → INTENT_RESOLVED → PLANNING）
+        session.transition(S_INTENT_RESOLVED, reason="按意图筛选工具定义")
+        session.transition(S_PLANNING, reason="开始规划")
 
         for step_idx in range(self.max_steps):
             try:
                 step, repairs = self.planner.decide(
                     user_input=user_input,
                     slots=session.slots,
-                    tools_prompt=tools_prompt,
+                    tools_prompt=pkg.tools,
                     observations=session.observations,
                     parent_span_id=root.span_id,
+                    history_text=pkg.history,
+                    retrieval_text=pkg.retrieval,
+                    system_prompt=pkg.system or SYSTEM_PROMPT,
                 )
             except PlanError as e:
-                session.state = S_FAILED
+                session.transition(S_FAILED, reason=f"规划失败: {e.kind}")
                 tracer.end_span(root, status="failed", error=str(e))
                 return TurnResult(
                     status=STATUS_FAILED,
@@ -131,6 +157,7 @@ class AgentRunner:
                     tools_called=tools_called,
                     error=e.kind,
                     trace_summary=tracer.summary(),
+                    context_report=pkg.to_report(),
                 )
 
             if repairs:
@@ -159,7 +186,8 @@ class AgentRunner:
                 # 门控：高风险一律拦下（FR-003）
                 if spec.risk == RISK_HIGH and not self.auto_confirm:
                     draft = self._dry_run(spec.name, step.args, tracer, root.span_id)
-                    session.state = S_AWAITING_CONFIRMATION
+                    session.set_pending(spec.name, step.args)
+                    session.transition(S_AWAITING_CONFIRMATION, reason="高风险动作待人工确认")
                     tracer.end_span(root, output_text="等待人工确认")
                     return TurnResult(
                         status=STATUS_AWAITING_CONFIRMATION,
@@ -170,18 +198,21 @@ class AgentRunner:
                         pending_tool=spec.name,
                         pending_args=step.args,
                         trace_summary=tracer.summary(),
+                        context_report=pkg.to_report(),
                     )
 
+                session.transition(S_EXECUTING, reason=f"执行 {spec.name}")
                 result = self._execute(spec.name, step.args, tracer, root.span_id)
                 tools_called.append(spec.name)
-                session.observations.append(f"{spec.name} -> {result}")
+                session.add_observation(f"{spec.name} -> {result}")
+                session.transition(S_PLANNING, reason="执行完毕，继续规划")
 
                 # 执行完再规划一次，让模型决定是继续还是收尾
                 continue
 
             # ---- 动作 2：追问 ----
             if step.action == ACTION_ASK_USER:
-                session.state = S_AWAITING_INPUT
+                session.transition(S_AWAITING_INPUT, reason="缺失信息，追问用户")
                 tracer.end_span(root, output_text=step.question)
                 return TurnResult(
                     status=STATUS_AWAITING_INPUT,
@@ -190,12 +221,13 @@ class AgentRunner:
                     trace_id=tracer.trace_id,
                     tools_called=tools_called,
                     trace_summary=tracer.summary(),
+                    context_report=pkg.to_report(),
                 )
 
             # ---- 动作 3：结束 ----
             if step.action == ACTION_FINISH:
-                session.state = S_DONE
-                session.add("assistant", step.answer)
+                session.transition(S_DONE, reason="任务完成")
+                session.add_message("assistant", step.answer)
                 tracer.start_span(
                     SPAN_RESPOND, "respond", parent_id=root.span_id, input_text=step.answer
                 )
@@ -207,9 +239,10 @@ class AgentRunner:
                     trace_id=tracer.trace_id,
                     tools_called=tools_called,
                     trace_summary=tracer.summary(),
+                    context_report=pkg.to_report(),
                 )
 
-        session.state = S_FAILED
+        session.transition(S_FAILED, reason="超出最大步数")
         tracer.end_span(root, status="failed", error="超出最大步数")
         return TurnResult(
             status=STATUS_MAX_STEPS,
@@ -219,22 +252,29 @@ class AgentRunner:
             tools_called=tools_called,
             error="max_steps_exceeded",
             trace_summary=tracer.summary(),
+            context_report=pkg.to_report(),
         )
 
     def confirm_and_execute(self, pending_tool: str, pending_args: Dict[str, Any]) -> TurnResult:
         """人工确认后真正执行挂起的高风险动作。"""
         tracer = Tracer()
         self._last_tracer = tracer
+        session = self.session
         root = tracer.start_span(SPAN_RUN, "confirm", input_text=pending_tool)
         args = dict(pending_args)
         args["confirmed"] = True
+
+        session.transition(S_EXECUTING, reason=f"人工确认后执行 {pending_tool}")
         result = self._execute(pending_tool, args, tracer, root.span_id)
+        session.add_observation(f"{pending_tool} -> {result}")
+        session.clear_pending()
+        session.transition(S_DONE, reason="确认动作执行完毕")
         tracer.end_span(root, output_text=str(result))
-        self.session.state = S_DONE
+
         return TurnResult(
             status=STATUS_DONE,
             message=f"已确认并执行 {pending_tool}：{result}",
-            state=self.session.state,
+            state=session.state,
             trace_id=tracer.trace_id,
             tools_called=[pending_tool],
             trace_summary=tracer.summary(),

@@ -185,7 +185,7 @@ def build_registry() -> ToolRegistry:
         required=["candidate", "role"],
         risk=RISK_LOW,
         returns="面试目标/流程/问题/风险点",
-        keywords=["面试方案", "面试问题", "面评"],
+        keywords=["面试方案", "面试问题", "面评", "方案", "问题"],
         impl=generate_interview_plan,
     ))
     reg.register(ToolSpec(
@@ -225,7 +225,7 @@ def build_registry() -> ToolRegistry:
         required=["candidate", "when"],
         risk=RISK_HIGH,
         returns="安排结果或草稿预览",
-        keywords=["安排面试", "约面试", "面试时间", "预约"],
+        keywords=["安排面试", "约面试", "面试时间", "预约", "面试"],
         impl=schedule_interview,
     ))
     reg.register(ToolSpec(

@@ -6,7 +6,7 @@
 | 项目代号 | **HRAH**（HRAgent Harness） |
 | 一句话定位 | 一个自己写的 Agent 运行时 + 一套给它打分的评测体系，用 HR 招聘场景验证 |
 | 文档版本 | v0.1（草稿） |
-| 状态 | 设计中 · M1 引擎骨架已实现 |
+| 状态 | 开发中 · M2 上下文管理与会话状态机已实现 |
 | 日期 | 2026-10-05 |
 | 性质声明 | **个人独立项目**，非公司产品，未上生产，无真实企业用户与流量 |
 
@@ -447,7 +447,7 @@ IDLE ──> INTENT_RESOLVED ──> PLANNING ──> EXECUTING ──> DONE
 |---|---|---|
 | M0 | PRD + 仓库初始化 | ✅ 完成：本文档、README、`.gitignore` |
 | M1 | 引擎骨架 | ✅ 完成：`tool_registry` / `planner` / `tracer` / `runner` 四场景跑通，含人工门控 |
-| M2 | 上下文与状态 | `context_manager` / `session_state` |
+| M2 | 上下文与状态 | ✅ 完成：`context.py`（分区预算+裁剪+压缩）、`state.py`（显式转移表）；基准测试平均降幅 36%，见 `reports/context_benchmark.md` |
 | M3 | 评测体系 | 24 条用例 + 双裁判 + 第一份报告 |
 | M4 | 场景挂接 | 4 个 HR 任务跑通，接真实模型 |
 | M5 | Dify 对照 | 云端工作流 + 对比报告 + ADR |

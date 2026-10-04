@@ -1,0 +1,81 @@
+﻿==========================================================================
+HRAH demo  |  LLM = stub  |  已注册工具 9 个
+高风险工具: ['schedule_interview', 'send_email']
+==========================================================================
+
+--- 场景 1 ---
+用户: 帮我写一份 Java 后端工程师的 JD
+状态: done  |  会话状态: DONE
+回复: 已完成。执行结果：1. generate_jd -> {'title': 'Java 后端工程师（中级）', 'city': '上海', 'sections': {'岗位职责': ['负责公司核心业务的 Java 后端工程师 相关设计与开发', '参与需求评审，输出技术方案并推动落地', '与产品、测试协作，保障交付质量'], '任职要求': ['中级及以上水平，相关经验 3~5 年', '具备良好的工程习惯与协作意识', '有复杂项目落地经验者优先'], '加分项': ['有开源贡献', '有跨端经验']}, 'note': '本内容为 AI 生成初稿，需人工确认后使用'}
+调用工具: ['generate_jd']
+上下文预算  470 / 6000 token  （占用 8%）
+  system         291 / 900    (32%)
+  tools          179 / 1200   (15%)
+  retrieval        0 / 1500   (0%)
+  history          0 / 1800   (0%)
+  observations     0 / 1800   (0%)
+  注入工具: ['generate_jd', 'schedule_interview', 'send_email']
+
+--- 场景 2 ---
+用户: 帮我筛一下简历
+状态: awaiting_input  |  会话状态: AWAITING_INPUT
+回复: 筛选简历需要先有 JD 和评分标准。请提供岗位 JD，或先让我生成一份？
+上下文预算  476 / 6000 token  （占用 8%）
+  system         291 / 900    (32%)
+  tools          185 / 1200   (15%)
+  retrieval        0 / 1500   (0%)
+  history          0 / 1800   (0%)
+  observations     0 / 1800   (0%)
+  注入工具: ['screen_resume', 'schedule_interview', 'send_email']
+
+--- 场景 3 ---
+用户: 给张三安排明天下午面试
+状态: awaiting_confirmation  |  会话状态: AWAITING_CONFIRMATION
+回复: 【需人工确认】即将执行高风险动作 schedule_interview。
+{'status': 'draft', 'preview': '将为 张三 安排面试，时间：明天下午', 'hint': '这是高风险动作，需人工确认后才会执行'}
+挂起待确认: schedule_interview {'candidate': '张三', 'when': '明天下午', 'confirmed': False}
+上下文预算  419 / 6000 token  （占用 7%）
+  system         291 / 900    (32%)
+  tools          128 / 1200   (11%)
+  retrieval        0 / 1500   (0%)
+  history          0 / 1800   (0%)
+  observations     0 / 1800   (0%)
+  注入工具: ['schedule_interview', 'send_email']
+  >> 模拟人工确认（真实场景此处由人点击）
+  >> 确认后: 已确认并执行 schedule_interview：{'status': 'executed', 'candidate': '张三', 'when': '明天下午'}
+
+--- 场景 4 ---
+用户: 发邮件通知候选人面试时间
+状态: awaiting_confirmation  |  会话状态: AWAITING_CONFIRMATION
+回复: 【需人工确认】即将执行高风险动作 send_email。
+{'status': 'draft', 'preview': {'to': 'candidate@example.com', 'subject': '面试通知', 'body': '您好，已为您安排面试，请查收。'}, 'hint': '这是高风险动作，需人工确认后才会发送'}
+挂起待确认: send_email {'to': 'candidate@example.com', 'subject': '面试通知', 'body': '您好，已为您安排面试，请查收。', 'confirmed': False}
+上下文预算  455 / 6000 token  （占用 8%）
+  system         291 / 900    (32%)
+  tools          164 / 1200   (14%)
+  retrieval        0 / 1500   (0%)
+  history          0 / 1800   (0%)
+  observations     0 / 1800   (0%)
+  注入工具: ['send_email', 'schedule_interview', 'get_candidate']
+  >> 模拟人工确认（真实场景此处由人点击）
+  >> 确认后: 已确认并执行 send_email：{'status': 'sent', 'to': 'candidate@example.com', 'subject': '面试通知'}
+
+--- 场景 5 ---
+用户: 帮我查一下年假制度
+状态: done  |  会话状态: DONE
+回复: 已完成。执行结果：1. search_knowledge -> {'query': '帮我查一下年假制度', 'hits': [{'source': '员工手册.md', 'snippet': '年假按司龄计算，满 1 年 5 天，满 3 年 10 天。'}, {'source': '报销制度.md', 'snippet': '差旅报销需在行程结束后 15 个工作日内提交。'}], 'note': '无依据时应明确说明资料不足，不硬编'}
+调用工具: ['search_knowledge']
+上下文预算  460 / 6000 token  （占用 8%）
+  system         291 / 900    (32%)
+  tools          169 / 1200   (14%)
+  retrieval        0 / 1500   (0%)
+  history          0 / 1800   (0%)
+  observations     0 / 1800   (0%)
+  注入工具: ['search_knowledge', 'schedule_interview', 'send_email']
+
+==========================================================================
+副作用检查（验证门控是否真的起作用）
+  实际安排的面试: [{'candidate': '张三', 'when': '明天下午'}]
+  实际发出的邮件: [{'to': 'candidate@example.com', 'subject': '面试通知', 'body': '您好，已为您安排面试，请查收。'}]
+  说明: 只有在人工确认后，上面两个列表才会出现内容。
+==========================================================================
