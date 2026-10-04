@@ -6,7 +6,7 @@
 | 项目代号 | **HRAH**（HRAgent Harness） |
 | 一句话定位 | 一个自己写的 Agent 运行时 + 一套给它打分的评测体系，用 HR 招聘场景验证 |
 | 文档版本 | v0.1（草稿） |
-| 状态 | 设计中 · 未实现 |
+| 状态 | 设计中 · M1 引擎骨架已实现 |
 | 日期 | 2026-10-05 |
 | 性质声明 | **个人独立项目**，非公司产品，未上生产，无真实企业用户与流量 |
 
@@ -445,8 +445,8 @@ IDLE ──> INTENT_RESOLVED ──> PLANNING ──> EXECUTING ──> DONE
 
 | 里程碑 | 内容 | 产出 |
 |---|---|---|
-| M0 | PRD + 仓库初始化 | 本文档、README、`.gitignore` |
-| M1 | 引擎骨架 | `tool_registry` / `planner` / `tracer` 可跑通 |
+| M0 | PRD + 仓库初始化 | ✅ 完成：本文档、README、`.gitignore` |
+| M1 | 引擎骨架 | ✅ 完成：`tool_registry` / `planner` / `tracer` / `runner` 四场景跑通，含人工门控 |
 | M2 | 上下文与状态 | `context_manager` / `session_state` |
 | M3 | 评测体系 | 24 条用例 + 双裁判 + 第一份报告 |
 | M4 | 场景挂接 | 4 个 HR 任务跑通，接真实模型 |
