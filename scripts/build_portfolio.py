@@ -33,6 +33,7 @@ DELIVERABLES = {
     "harness.html": ("可运行 harness 代码", ["README.md"]),
     "report.html": ("评测报告 + Dify 对比", ["reports/dify_vs_harness.md"]),
     "debug.html": ("调试日志", ["docs/99-问题与解决记录.md"]),
+    "failure-modes.html": ("失败模式手册", ["docs/05-失败模式手册.md"]),
 }
 
 DOC_CSS = """
