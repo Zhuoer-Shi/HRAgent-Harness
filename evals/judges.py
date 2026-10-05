@@ -77,6 +77,13 @@ def judge_turn(case: Case, obs: TurnObs) -> Judgement:
             f"期望 {exp['status']}，实际 {obs.status}",
         ))
 
+    if "status_in" in exp:
+        checks.append(Check(
+            "结束状态在允许集合内",
+            obs.status in exp["status_in"],
+            f"期望 {exp['status_in']}，实际 {obs.status}",
+        ))
+
     if "pending_tool" in exp:
         checks.append(Check(
             "挂起的高风险动作",
@@ -132,6 +139,15 @@ def judge_turn(case: Case, obs: TurnObs) -> Judgement:
             f"回复应包含「{kw}」",
             kw in obs.message,
             f"实际回复: {obs.message[:80]}",
+        ))
+
+    # OR 语义：命中任一关键词即通过（避免把"说对了但没用某个字面词"判成失败）
+    if exp.get("message_contains_any"):
+        hit = [kw for kw in exp["message_contains_any"] if kw in obs.message]
+        checks.append(Check(
+            "回复应包含以下任一关键词",
+            bool(hit),
+            f"命中 {hit or '无'}，实际回复: {obs.message[:80]}",
         ))
 
     for kw in exp.get("message_not_contains", []):

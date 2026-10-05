@@ -277,6 +277,14 @@ class EvalRunner:
         except Exception as e:  # noqa: BLE001
             # 网络抖动、配额耗尽、模型返回不可解析内容 —— 这些只该毁掉这一轮，
             # 不该让整份评测连报告都出不来。接真模型之后这条尤其重要。
+            import traceback as _tb
+            tb_text = _tb.format_exc()
+            # 完整堆栈落盘，便于定位真模型下的偶发异常（可观测性）
+            try:
+                with open(os.path.join(self.root, "reports", "debug_traceback.txt"), "a", encoding="utf-8") as _f:
+                    _f.write(f"=== {case.id} round{round_idx} ===\n{tb_text}\n")
+            except Exception:  # noqa: BLE001
+                pass
             return RunRecord(
                 round=round_idx,
                 status="error",

@@ -74,7 +74,7 @@ class Tracer:
 
     def start_span(
         self,
-        type: str,
+        span_type: str,
         name: str,
         parent_id: Optional[str] = None,
         input_text: str = "",
@@ -83,7 +83,7 @@ class Tracer:
         span = Span(
             span_id="sp-" + uuid.uuid4().hex[:8],
             parent_id=parent_id,
-            type=type,
+            type=span_type,
             name=name,
             input_text=self._clip(input_text),
             meta=meta or {},
@@ -109,14 +109,14 @@ class Tracer:
     @contextmanager
     def span(
         self,
-        type: str,
+        span_type: str,
         name: str,
         parent_id: Optional[str] = None,
         input_text: str = "",
         meta: Optional[Dict[str, Any]] = None,
     ) -> Iterator[Span]:
         """用 with 块自动记录耗时与异常。"""
-        sp = self.start_span(type, name, parent_id, input_text, meta)
+        sp = self.start_span(span_type, name, parent_id, input_text, meta)
         try:
             yield sp
         except Exception as e:  # noqa: BLE001 - Trace 需要捕获一切异常

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import re
 import time
 import urllib.error
@@ -86,14 +87,28 @@ class DeepSeekLLM(BaseLLM):
             method="POST",
         )
         t0 = time.perf_counter()
-        try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                body = json.loads(resp.read().decode("utf-8"))
-        except urllib.error.HTTPError as e:
-            detail = e.read().decode("utf-8", errors="ignore")
-            raise RuntimeError(f"DeepSeek 调用失败 {e.code}: {detail}") from e
-        except urllib.error.URLError as e:
-            raise RuntimeError(f"DeepSeek 网络错误: {e.reason}") from e
+        last_err: Exception = RuntimeError("未发起调用")
+        # 退避重试：网络抖动（SSL EOF 等）与 5xx/429 可重试；4xx 是请求本身有误，不重试
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                    body = json.loads(resp.read().decode("utf-8"))
+                break
+            except urllib.error.HTTPError as e:
+                last_err = e
+                if attempt < 2 and e.code in (429, 500, 502, 503, 504):
+                    time.sleep(0.5 * (2 ** attempt) + random.uniform(0, 0.3))
+                    continue
+                detail = e.read().decode("utf-8", errors="ignore")
+                raise RuntimeError(f"DeepSeek 调用失败 {e.code}: {detail}") from e
+            except urllib.error.URLError as e:
+                last_err = e
+                if attempt < 2:
+                    time.sleep(0.5 * (2 ** attempt) + random.uniform(0, 0.3))
+                    continue
+                raise RuntimeError(f"DeepSeek 网络错误: {e.reason}") from e
+        else:
+            raise RuntimeError(f"DeepSeek 重试 3 次仍失败: {last_err}") from last_err
         latency = round((time.perf_counter() - t0) * 1000, 2)
 
         usage = body.get("usage", {}) or {}
