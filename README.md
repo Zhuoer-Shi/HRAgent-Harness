@@ -19,7 +19,7 @@
 | M2 | 上下文管理与会话状态机 | ✅ 完成 |
 | M3 | 评测体系（24 条用例 + 双裁判 + baseline 回归） | ✅ 完成 |
 | M4 | 工具选择策略重构 + 接 DeepSeek 真模型 | ✅ 完成（live 评测 24 条通过；暴露并修复 BUG-007 / BUG-008） |
-| M5 | Dify 对照轨道 + 对比 ADR | ⬜ 待做 |
+| M5 | Dify 对照轨道 + 对比 ADR | ✅ 完成。ADR-003 已 **Accepted**：定性结论（mandatory vs advisory / durable span 树 vs 流式事件 / 自研代码 vs OpenAPI / 可回归）基于代码对比 + Dify 云端实测；定量 head-to-head 已跑通 24 条 ×1（可比维度 B 2/2 + D 5/6；A/C 共 16 条设计不可比不计入通过率）。联调踩坑7（Cloudflare 按 UA 封 403）/踩坑8（Agent 只支持 streaming，blocking 被 400 拒）已修并记录于 `docs/99-问题与解决记录.md`；Dify 侧已建 `HRAH-Dify-Control` 应用 + `send_email` 工具 + 软确认实测 |
 | M6 | 作品集网站 | ⬜ 待做 |
 
 ## 快速开始
@@ -74,18 +74,23 @@ HRAgent-Harness/
 ├── evals/                # 评测（给引擎考试的那一层，M3）
 │   ├── cases.py          # 24 条用例，四类各 6 条，标注 framework / model 级别
 │   ├── judges.py         # 规则裁判 + LLM 裁判 + 单元型断言
-│   └── runner.py         # 执行器：重复运行、稳定性、指标、baseline 回归
+│   ├── runner.py         # 执行器：重复运行、稳定性、指标、baseline 回归
+│   └── dify_adapter.py   # M5 双轨：Dify 云端对照适配器（streaming + SSE + 不可比标记）
 ├── tools/
 │   └── hr_tools.py       # HR 场景工具（mock 实现）
 ├── scripts/
 │   ├── context_benchmark.py  # 上下文预算基准测试（旧逻辑基线在脚本内冻结复算）
 │   ├── tool_select_probe.py  # 工具选择探针（自证修复不是过拟合）
-│   └── run_evals.py          # 评测入口
+│   ├── run_evals.py          # 评测入口（harness 主轨）
+│   └── run_dify_eval.py      # M5 评测入口（Dify 对照轨；临时探针 _dify_probe.py 已删）
 ├── reports/
 │   ├── context_benchmark.md  # 基准测试报告
 │   ├── tool_select_probe.md  # 探针报告
 │   ├── eval_latest.md        # 评测报告（人读）
 │   ├── eval_latest.json      # 评测结果（机读，baseline 回归用）
+│   ├── dify_eval_latest.md   # M5 Dify 对照评测报告（人读）
+│   ├── dify_eval_latest.json # M5 Dify 对照评测结果（机读）
+│   ├── dify_vs_harness.md    # M5 Dify vs harness 横向对比报告（ADR-003 配套）
 │   └── traces/               # 每次运行的完整 Trace 链路
 ├── docs/                 # PRD / ADR / 问题与解决记录
 └── demo.py
