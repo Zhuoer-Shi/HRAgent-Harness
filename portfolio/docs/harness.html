@@ -140,8 +140,8 @@
 </tr>
 <tr>
 <td>M6</td>
-<td>作品集网站</td>
-<td>⬜ 待做</td>
+<td>作品集网站（静态单文件 + 交付物转 HTML + Trace 观测看板）</td>
+<td>✅ 完成（已发布 https://hrah-portfolio.app.workbuddy.host/）</td>
 </tr>
 </tbody>
 </table>
@@ -188,6 +188,7 @@ python scripts/run_evals.py --live
 │   ├── state.py          # 会话状态机：显式转移表，非法转移直接报错（M2）
 │   ├── runner.py         # 会话主循环：状态机 + 门控 + 工具执行
 │   ├── tracer.py         # Trace：trace_id + span 树，可回放
+│   ├── trace_store.py    # Trace 落库（SQLite，标准库）：失败可查询/聚合/归因（M6）
 │   └── llm.py            # LLM 客户端：DeepSeek / Stub
 ├── evals/                # 评测（给引擎考试的那一层，M3）
 │   ├── cases.py          # 24 条用例，四类各 6 条，标注 framework / model 级别
@@ -200,7 +201,8 @@ python scripts/run_evals.py --live
 │   ├── context_benchmark.py  # 上下文预算基准测试（旧逻辑基线在脚本内冻结复算）
 │   ├── tool_select_probe.py  # 工具选择探针（自证修复不是过拟合）
 │   ├── run_evals.py          # 评测入口（harness 主轨）
-│   └── run_dify_eval.py      # M5 评测入口（Dify 对照轨；临时探针 _dify_probe.py 已删）
+│   ├── run_dify_eval.py      # M5 评测入口（Dify 对照轨；临时探针 _dify_probe.py 已删）
+│   └── build_trace_dashboard.py  # M6 从 traces.db 生成静态观测看板（失败归因）
 ├── reports/
 │   ├── context_benchmark.md  # 基准测试报告
 │   ├── tool_select_probe.md  # 探针报告
@@ -209,8 +211,12 @@ python scripts/run_evals.py --live
 │   ├── dify_eval_latest.md   # M5 Dify 对照评测报告（人读）
 │   ├── dify_eval_latest.json # M5 Dify 对照评测结果（机读）
 │   ├── dify_vs_harness.md    # M5 Dify vs harness 横向对比报告（ADR-003 配套）
-│   └── traces/               # 每次运行的完整 Trace 链路
+│   ├── traces/               # 每次运行的完整 Trace 链路（JSON，可再生成）
+│   └── traces.db             # Trace SQLite 库（看板数据源，可再生成）
 ├── docs/                 # PRD / ADR / 问题与解决记录
+├── portfolio/            # M6 作品集（纯静态，已发布）
+│   ├── index.html        # 首页（受控 HR Agent 定位 + 时间线 + 技术栈）
+│   └── docs/             # 交付物静态页（PRD+ADR / 代码 / 报告 / 调试日志 / Trace 看板）
 └── demo.py
 </code></pre>
 <h2 id="三个核心设计">三个核心设计</h2>
