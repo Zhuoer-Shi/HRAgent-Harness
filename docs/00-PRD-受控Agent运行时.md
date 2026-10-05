@@ -448,7 +448,7 @@ IDLE ──> INTENT_RESOLVED ──> PLANNING ──> EXECUTING ──> DONE
 | M0 | PRD + 仓库初始化 | ✅ 完成：本文档、README、`.gitignore` |
 | M1 | 引擎骨架 | ✅ 完成：`tool_registry` / `planner` / `tracer` / `runner` 四场景跑通，含人工门控 |
 | M2 | 上下文与状态 | ✅ 完成：`context.py`（分区预算+裁剪+压缩）、`state.py`（显式转移表）；基准测试平均降幅 36%，见 `reports/context_benchmark.md` |
-| M3 | 评测体系 | 24 条用例 + 双裁判 + 第一份报告 |
+| M3 | 评测体系 | ✅ 完成：`evals/`（24 条用例 / 规则+LLM 双裁判 / 重复运行 / baseline 回归 / Trace 落盘）；Stub 下跑 13 条×3 轮，硬指标三项 100%，可控完成率 83%，见 `reports/eval_latest.md` |
 | M4 | 场景挂接 | 4 个 HR 任务跑通，接真实模型 |
 | M5 | Dify 对照 | 云端工作流 + 对比报告 + ADR |
 | M6 | 作品集 | 网站（内容全部来自真实产物）|

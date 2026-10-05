@@ -8,12 +8,29 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
+.mypy_cache/
 .ruff_cache/
 dist/
 build/
 .env
+
+# 每次评测都会重新生成的结果（可复现，不进版本库）
+reports/*.json
+reports/traces/
+
+# baseline 例外：它是回归对比的参照，变化本身就需要被记录
+!reports/eval_baseline.json
+
+# 本地核对/调试时产生的临时输出
 run_out.txt
 trace_out.txt
-runs/
-reports/*.json
-!reports/.gitkeep
+evals_out.txt
+bench_out.txt
+m2_out.txt
+chk.txt
+gs.txt
+gitlog.txt
+files.txt
+verify_*.txt
+base1.txt
+base2.txt
