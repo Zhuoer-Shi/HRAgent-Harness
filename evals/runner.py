@@ -31,6 +31,7 @@ from harness.runner import (
     STATUS_MAX_STEPS,
     AgentRunner,
 )
+from harness.trace_store import TraceStore
 from tools.hr_tools import SCHEDULED_INTERVIEWS, SENT_EMAILS, build_registry  # noqa: E402
 
 from .cases import CATEGORY_NAMES, KIND_TURN, KIND_UNIT, LEVEL_MODEL, CASES, Case
@@ -252,6 +253,7 @@ class EvalRunner:
         repeat: int = 3,
         save_traces: bool = True,
         root: str = ".",
+        db_path: Optional[str] = None,
     ) -> None:
         self.llm = llm or build_llm(backend)
         self.backend = self.llm.name
@@ -262,6 +264,9 @@ class EvalRunner:
         self.root = root
         self.judge = LLMJudge(self.llm)
         self.registry = build_registry()
+        # Trace 落库（可选）：把 case/轮次/通过与否/失败断言 一起存进 SQLite，
+        # 让失败可以被查询和归因（对应 PRD「失败可定位率」）。
+        self.store = TraceStore(db_path) if db_path else None
 
     # ---------- 单轮 ----------
 
@@ -349,6 +354,26 @@ class EvalRunner:
         with open(path, "w", encoding="utf-8") as f:
             f.write(tracer.to_json())
 
+        # 同时落 SQLite（可选）：把「用例 / 轮次 / 通过与否 / 失败断言」和 span 树
+        # 一起存，让失败可以被查询、聚合、归因（对应 PRD 的失败可定位率）。
+        if self.store is not None:
+            self.store.save_trace(
+                {
+                    "trace_id": tracer.trace_id,
+                    "case_id": case.id,
+                    "case_title": case.title,
+                    "category": case.category,
+                    "round": rec.round,
+                    "backend": self.backend,
+                    "status": rec.status,
+                    "passed": rec.passed,
+                    "reason": rec.reason,
+                    "failed_checks": rec.failed,
+                    "summary": tracer.summary(),
+                    "spans": [s.to_dict() for s in tracer.spans],
+                }
+            )
+
     # ---------- 单条用例 ----------
 
     def run_case(self, case: Case) -> CaseResult:
@@ -392,6 +417,10 @@ class EvalRunner:
             results=results,
             usage=self.counter.summary(),
         )
+
+    def close(self) -> None:
+        if self.store is not None:
+            self.store.close()
 
 
 # ======================================================================

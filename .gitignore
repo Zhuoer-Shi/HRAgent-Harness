@@ -17,6 +17,7 @@ build/
 # 每次评测都会重新生成的结果（可复现，不进版本库）
 reports/*.json
 reports/traces/
+reports/traces.db
 
 # baseline 例外：它是回归对比的参照，变化本身就需要被记录
 !reports/eval_baseline.json

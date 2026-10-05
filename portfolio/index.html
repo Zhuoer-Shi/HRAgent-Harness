@@ -508,8 +508,8 @@ if step.action in (ACTION_CALL_TOOL, ACTION_REQUEST_CONFIRM):
       </div></div>
       <div class="tl-item"><div class="dot"></div><div>
         <div class="m">M6 · 交付物</div>
-        <h3>四件套落地</h3>
-        <p>PRD + ADR 文档、可运行 harness 代码、评测报告、以及你现在看的这份作品集。</p>
+        <h3>交付物落地</h3>
+        <p>PRD + ADR、harness 代码、评测报告、调试日志、Trace 观测看板，以及你现在看的这份作品集。</p>
       </div></div>
     </div>
   </div>
@@ -576,13 +576,14 @@ if step.action in (ACTION_CALL_TOOL, ACTION_REQUEST_CONFIRM):
 
 <footer id="deliver">
   <div class="wrap">
-    <div class="sec-head"><span class="sec-idx" style="color:var(--accent-bright)">10</span><h2 style="color:#fff">交付物四件套</h2></div>
+    <div class="sec-head"><span class="sec-idx" style="color:var(--accent-bright)">10</span><h2 style="color:#fff">交付物五件套</h2></div>
     <p style="color:#9AA3B2;margin:0 0 20px">都在同一个 git 仓库里，提交历史即"一步步做出来"的证据链。</p>
     <div class="deliver">
       <a href="docs/prd-adr.html"><span>PRD + ADR 文档<span class="desc" style="display:block">00-PRD 与 01/02/03 三篇 ADR，记录每个关键取舍与推翻条件</span></span><span class="arrow">→</span></a>
       <a href="docs/harness.html"><span>可运行 harness 代码<span class="desc" style="display:block">harness/ 引擎 + evals/ 评测，零依赖，python demo.py 即跑</span></span><span class="arrow">→</span></a>
       <a href="docs/report.html"><span>评测报告 + Dify 对比<span class="desc" style="display:block">24 条用例逐条结果，通过/未判定/不可比三桶口径</span></span><span class="arrow">→</span></a>
       <a href="docs/debug.html"><span>调试日志<span class="desc" style="display:block">BUG-001~008 + Dify 踩坑，面试可讲的定位过程</span></span><span class="arrow">→</span></a>
+      <a href="docs/traces.html"><span>Trace 观测看板<span class="desc" style="display:block">每次运行 span 树落库，失败可查询 / 聚合 / 归因，SQLite 零依赖</span></span><span class="arrow">→</span></a>
     </div>
     <p style="margin:32px 0 0"><strong>诚实声明：</strong>本项目为个人项目，未上生产、无真实用户流量。文中通过率均为离线固定用例集测评结果，非上线数据；目标值自设，非行业标准。</p>
     <p style="margin-bottom:0">HRAgent Harness · 受控 Agent 运行时 + 评测闭环 · 纯 Python 标准库 · 2026</p>

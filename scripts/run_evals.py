@@ -147,6 +147,7 @@ def main() -> int:
     ap.add_argument("--save-baseline", action="store_true", help="把本次结果存为基线")
     ap.add_argument("--baseline", action="store_true", help="与已有基线对比")
     ap.add_argument("--no-traces", action="store_true", help="不落盘 Trace")
+    ap.add_argument("--no-db", action="store_true", help="不落 SQLite Trace 库")
     args = ap.parse_args()
 
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -156,11 +157,16 @@ def main() -> int:
         wanted = {c.strip().upper() for c in args.category.split(",") if c.strip()}
         cases = [c for c in CASES if c.category in wanted]
 
+    # Trace 落 SQLite（默认开）：跑完就能生成观测看板，失败可查询、可归因
+    db_path = None if args.no_db else os.path.join(root, REPORTS_DIR, "traces.db")
+    if db_path and os.path.exists(db_path):
+        os.remove(db_path)  # 每次跑批是全新快照，不累积历史（避免 stub/live 混库）
     runner = EvalRunner(
         backend="deepseek" if args.live else "stub",
         repeat=args.repeat,
         save_traces=not args.no_traces,
         root=root,
+        db_path=db_path,
     )
 
     print("=" * 78)
@@ -237,6 +243,9 @@ def main() -> int:
     print(f"  结果: {json_path}")
     if not args.no_traces:
         print(f"  Trace: {os.path.join(root, 'reports', 'traces')}/")
+    if db_path:
+        print(f"  Trace 库: {db_path}")
+    runner.close()
     return 0
 
 
