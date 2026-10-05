@@ -134,7 +134,7 @@ harness 每层改动都能用 `scripts/run_evals.py`（24 条 × 3 轮 + baselin
 
 > 逐条 24 行并排明细（含每条可比性判定与备注）见 `reports/dify_vs_harness.md`。
 
-**怎么读这个数**：Dify 在内容质量上 5/6 略高于 harness 3/6，但这是**所选模型与提示词**的差异（Dify 侧用 `DeepSeek V4.1 Flash` `[待核实]`，harness 用 `deepseek-chat`），**不是引擎能力差异**——harness 的卖点从来不是"写得更漂亮"，而是 mandatory 门控 / span 级可观测 / 自研代码工具。Dify 内容质量更高，反而**强化**了本文结论："低风险内容生成用 Dify 更快更好；高风险可控动作才需自研 harness"。
+**怎么读这个数**：Dify 在内容质量上 5/6 略高于 harness 3/6，但这是**所选模型与提示词**的差异（Dify 侧用 dify.ai 控制台确认的 `DeepSeek V4.1 Flash`——模型市场显示名，非官方 API 端点；harness 用官方 `deepseek-chat`，两者**并非同一模型端点**），**不是引擎能力差异**——harness 的卖点从来不是"写得更漂亮"，而是 mandatory 门控 / span 级可观测 / 自研代码工具。Dify 内容质量更高，反而**强化**了本文结论："低风险内容生成用 Dify 更快更好；高风险可控动作才需自研 harness"。
 
 Dify 对照轨仅搭 1 个自定义工具（send_email）+ 平台内置 shell_run，**未接知识库**——故 B05 考验的是模型"不编造"能力而非检索；与 harness 侧（接 mock KB）非完全同构对比，已如实标注。不把定性结论伪装成定量胜出。
 
@@ -195,5 +195,5 @@ Dify 对照轨仅搭 1 个自定义工具（send_email）+ 平台内置 shell_ru
 - ✅ **已校正（streaming 暴露工具调用）**：原假设"Dify 完全看不到工具调用"已推翻——`chat-messages` 的 **Agent 应用只支持 streaming**，且 streaming 的 `agent_thought` 事件携带 `tool` / `tool_input` / `observation`。论据二已据实测改写为"流式事件可见 vs durable span 树"。（`[待核实: Dify 官方 API 文档]` 仍建议核对各事件的完整 schema 与字段含义）
 - ✅ **已校正（无 mandatory 门控）**：Dify Agent App **只支持 streaming**，streaming 响应里**没有 gate / confirmation 信号字段**；门控纯靠提示词（踩坑4）。论据一从"advisory"坐实为"API 侧无强制门控信号"。
 - `[待核实]` Dify 日志页面"暂无日志"是"预览会话不写日志"还是"该版确实不落日志"——不影响会话级结论，但影响能否拿到持久化样本做离线分析。
-- `[待核实: DeepSeek 模型名]` Dify 侧选用的 `DeepSeek V4.1 Flash` 是否为 dify.ai 当前可用且支持 Function Calling 的准确名称（搭建时 `gpt-5.2` 因不支持工具调用被标不兼容，已切换）。
+- ✅ **已确认（2026-10-05 控制台截图）**：`HRAH-Dify-Control` 选用的模型为 **`DeepSeek V4.1 Flash`**（LLM / CHAT / 1000K 上下文，支持 VISION，无「不兼容」告警；搭建时 `gpt-5.2` 因不支持工具调用已切换）。注意这是 dify.ai 模型市场的显示名，其底层映射以平台为准；与 harness 侧官方 API 的 `deepseek-chat` **并非同一端点**——D 类差异归因于"模型/端点 + 提示词"的证据更充分。
 - `[待核实]` `shell_run` 这类**平台内置工具**在 Agent 模式下的可调范围与开关项——本 ADR 仅实测到它会被自动调用，其完整清单与禁用方式以 Dify 官方文档为准。
