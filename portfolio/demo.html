@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>可交互 Demo · HRAgent Harness</title>
+<style>
+  :root {
+    --ink-900:#0A0F1A; --ink-800:#101828; --paper:#F7F8FA; --card:#FFFFFF;
+    --line:#E6E8EE; --text-hi:#101828; --text-mid:#475467; --text-low:#667085;
+    --accent:#0E7490; --accent-bright:#22D3EE; --accent-soft:#E0F2FE;
+    --warn:#B45309; --warn-soft:#FEF3C7; --bad:#B91C1C; --bad-soft:#FEE2E2;
+    --ok:#15803D; --ok-soft:#DCFCE7; --violet:#7C3AED; --violet-soft:#F3E8FF;
+    --radius-sm:9px;
+    --font-ui:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    --font-mono:"SF Mono","JetBrains Mono","Consolas",monospace;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:var(--font-ui); background:var(--paper); color:var(--text-hi); line-height:1.7; font-size:15px; }
+  .top { background:var(--ink-900); color:#fff; }
+  .top .inner { max-width:1100px; margin:0 auto; padding:16px 24px; display:flex; align-items:center; gap:16px; }
+  .top a { color:var(--accent-bright); text-decoration:none; font-size:14px; font-family:var(--font-mono); }
+  .top .t { font-weight:600; font-size:14px; }
+  .top .badge { margin-left:auto; font-family:var(--font-mono); font-size:12px; color:var(--accent-bright); border:1px solid rgba(34,211,238,.4); padding:2px 8px; border-radius:999px; }
+
+  .hero { background:var(--ink-900); color:#fff; border-bottom:1px solid rgba(255,255,255,.08); }
+  .hero .inner { max-width:1100px; margin:0 auto; padding:34px 24px 30px; }
+  .hero h1 { margin:0 0 8px; font-size:26px; letter-spacing:-.4px; }
+  .hero p { margin:0; color:#9AA3B2; font-size:14px; max-width:720px; }
+  .hero .trace-line { display:flex; gap:6px; margin-top:18px; }
+  .hero .dot { width:9px; height:9px; border-radius:50%; background:#1E293B; }
+  .hero .dot.on { background:var(--accent-bright); box-shadow:0 0 8px var(--accent-bright); }
+
+  .layout { max-width:1100px; margin:0 auto; display:flex; gap:24px; align-items:flex-start; padding:24px; }
+  .side { flex:0 0 260px; position:sticky; top:16px; }
+  .side h2 { font-size:12px; letter-spacing:.8px; text-transform:uppercase; color:var(--text-low); font-family:var(--font-mono); margin:0 0 10px; }
+  .scen { display:block; width:100%; text-align:left; border:1px solid var(--line); background:var(--card); border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:8px; cursor:pointer; font-family:var(--font-ui); transition:border-color .15s, box-shadow .15s; }
+  .scen:hover { border-color:var(--accent); }
+  .scen.active { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  .scen .no { font-family:var(--font-mono); font-size:11px; color:var(--accent); }
+  .scen .t { display:block; font-weight:600; font-size:14px; margin-top:2px; }
+  .scen .c { display:block; font-size:12px; color:var(--text-mid); margin-top:2px; }
+
+  .main { flex:1 1 auto; min-width:0; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:var(--radius-sm); padding:20px 22px; margin-bottom:16px; }
+  .panel h3 { margin:0 0 4px; font-size:15px; }
+  .panel .sub { color:var(--text-low); font-size:13px; margin:0 0 12px; }
+  .bubble { background:var(--accent-soft); border-left:4px solid var(--accent); padding:12px 16px; border-radius:0 var(--radius-sm) var(--radius-sm) 0; font-size:15px; }
+
+  .controls { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .btn { border:1px solid var(--line); background:var(--card); color:var(--text-hi); padding:7px 14px; border-radius:7px; cursor:pointer; font-size:13px; font-family:var(--font-ui); }
+  .btn:hover { border-color:var(--accent); color:var(--accent); }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .progress { font-family:var(--font-mono); font-size:13px; color:var(--text-low); margin-left:auto; }
+
+  .timeline { list-style:none; margin:0; padding:0; }
+  .step { display:flex; gap:12px; padding:10px 0; border-left:2px solid var(--line); margin-left:7px; padding-left:18px; opacity:.32; transition:opacity .2s; }
+  .step.done { opacity:.75; }
+  .step.current { opacity:1; border-left-color:var(--accent-bright); }
+  .step .node { flex:0 0 10px; height:10px; width:10px; border-radius:50%; background:#Cbd5E1; margin-top:7px; margin-left:-24px; }
+  .step.current .node { background:var(--accent-bright); box-shadow:0 0 0 4px var(--accent-soft); }
+  .step.done .node { background:var(--accent); }
+  .step .body { min-width:0; }
+  .step .head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .pill { font-family:var(--font-mono); font-size:11px; padding:1px 8px; border-radius:999px; white-space:nowrap; }
+  .pill.run { background:#F1F5F9; color:#475467; }
+  .pill.intent { background:var(--accent-soft); color:var(--accent); }
+  .pill.llm { background:#CFFAFE; color:#0E7490; }
+  .pill.plan { background:var(--warn-soft); color:var(--warn); }
+  .pill.gate { background:var(--bad-soft); color:var(--bad); font-weight:700; }
+  .pill.tool { background:var(--ok-soft); color:var(--ok); }
+  .pill.respond { background:var(--violet-soft); color:var(--violet); }
+  .pill.repair { background:var(--warn-soft); color:var(--warn); }
+  .step .name { font-family:var(--font-mono); font-size:13px; color:var(--text-hi); }
+  .step .meta { font-family:var(--font-mono); font-size:11px; color:var(--text-low); }
+  .step .io { margin-top:6px; font-size:13px; color:var(--text-mid); }
+  .step .io code { background:var(--paper); border:1px solid var(--line); padding:1px 5px; border-radius:4px; font-family:var(--font-mono); font-size:12px; color:var(--text-hi); }
+  .step .io .k { color:var(--text-low); font-size:12px; margin-right:4px; }
+  .divider { list-style:none; font-family:var(--font-mono); font-size:12px; color:var(--accent); padding:12px 0 4px; font-weight:600; }
+  .gate-callout { background:var(--bad-soft); border:1px solid #FECACA; border-radius:var(--radius-sm); padding:12px 16px; margin:8px 0; font-size:14px; }
+  .gate-callout b { color:var(--bad); }
+
+  .result { display:flex; gap:12px; align-items:flex-start; }
+  .st { font-family:var(--font-mono); font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; white-space:nowrap; }
+  .st.done { background:var(--ok-soft); color:var(--ok); }
+  .st.awaiting_input { background:var(--warn-soft); color:var(--warn); }
+  .st.awaiting_confirmation { background:var(--bad-soft); color:var(--bad); }
+  .st.failed { background:var(--bad-soft); color:var(--bad); }
+  .st.max_steps_exceeded { background:var(--bad-soft); color:var(--bad); }
+  .msg { white-space:pre-wrap; font-size:14px; color:var(--text-hi); margin:0; }
+
+  .sidefx { font-size:13px; color:var(--text-mid); }
+  .sidefx code { font-family:var(--font-mono); font-size:12px; }
+
+  @media (max-width:820px) {
+    .layout { flex-direction:column; }
+    .side { position:static; flex:0 0 auto; width:100%; }
+  }
+</style>
+</head>
+<body>
+<div class="top"><div class="inner">
+  <a href="index.html">← 返回作品集</a><span class="t">可交互 Demo · 受控 Agent 运行时</span>
+  <span class="badge">backend: <span id="backend"></span></span>
+</div></div>
+
+<div class="hero"><div class="inner">
+  <h1>点一个场景，看 Agent 一步步怎么决策</h1>
+  <p>这不是截图，是 <code>python demo.py</code> 真实运行录下来的 Trace 回放——每个节点都是引擎里真实发生的一个 span。点「下一步」逐步走一遍：意图识别 → 注入工具 → 模型规划 → 门控 → 工具执行 → 最终响应。</p>
+  <div class="trace-line"><span class="dot on"></span><span class="dot"></span><span class="dot on"></span><span class="dot"></span><span class="dot on"></span><span class="dot"></span><span class="dot on"></span></div>
+</div></div>
+
+<div class="layout">
+  <aside class="side">
+    <h2>场景（5 个）</h2>
+    <div id="scen-list"></div>
+  </aside>
+
+  <main class="main">
+    <div class="panel">
+      <h3 id="scen-title"></h3>
+      <p class="sub" id="scen-note"></p>
+      <div class="bubble" id="scen-input"></div>
+    </div>
+
+    <div class="panel">
+      <h3>意图识别 → 注入的工具</h3>
+      <p class="sub">引擎按意图打分，只把相关工具定义塞进上下文（不相关的不进）。</p>
+      <div class="bubble" style="font-family:var(--font-mono);font-size:13px" id="selected-tools"></div>
+    </div>
+
+    <div class="panel">
+      <h3>决策链路（Trace 回放）</h3>
+      <div class="controls">
+        <button class="btn" id="btn-prev">‹ 上一步</button>
+        <button class="btn primary" id="btn-next">下一步 ›</button>
+        <button class="btn" id="btn-play">▶ 自动播放</button>
+        <button class="btn" id="btn-reset">↺ 重置</button>
+        <span class="progress" id="progress">步骤 0 / 0</span>
+      </div>
+      <ol class="timeline" id="timeline" style="margin-top:14px"></ol>
+    </div>
+
+    <div class="panel">
+      <h3>最终结果</h3>
+      <div class="result">
+        <span class="st" id="final-status"></span>
+        <div style="min-width:0">
+          <p class="msg" id="final-msg"></p>
+          <p class="msg" style="color:var(--text-mid);font-family:var(--font-mono);font-size:13px" id="final-tools"></p>
+          <p class="msg" id="confirm-msg" style="color:var(--ok);margin-top:8px"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel sidefx">
+      <strong>诚实声明：</strong>本页数据来自 <code>demo.py</code> 的一次真实运行，回放的是那次运行的完整 Trace；模型为 <code><span id="backend2"></span></code>（Stub 为规则模拟、不花钱，DeepSeek 为真模型）。<span id="sidefx"></span>
+    </div>
+  </main>
+</div>
+
+<script>
+const DATA = {"backend": "deepseek", "side_effect": {"scheduled": [], "sent": []}, "scenarios": [{"id": 1, "input": "帮我写一份 Java 后端工程师的 JD", "concept": "低风险任务 · 自动完成", "note": "低风险任务不该被门控打断，直接调 generate_jd 跑完。", "status": "done", "state": "DONE", "message": "已为你生成《Java 后端工程师（中级）》JD 初稿（城市：上海）：\n\n【岗位职责】\n1. 负责公司核心业务的 Java 后端工程师相关设计与开发\n2. 参与需求评审，输出技术方案并推动落地\n3. 与产品、测试协作，保障交付质量\n\n【任职要求】\n1. 中级及以上水平，相关经验 3~5 年\n2. 具备良好的工程习惯与协作意识\n3. 有复杂项目落地经验者优先\n\n【加分项】\n1. 有开源贡献\n2. 有跨端经验\n\n注：本内容为 AI 生成初稿，需人工确认后使用。如需调整级别或工作城市，请告知。", "tools_called": ["generate_jd"], "pending_tool": null, "tools_selected": ["generate_jd"], "tools_dropped": [], "trace": {"trace_id": "tr-1d86d37291b0", "spans": [{"span_id": "sp-ef7cbeab", "parent_id": null, "type": "run", "name": "run", "input": "帮我写一份 Java 后端工程师的 JD", "output": "已为你生成《Java 后端工程师（中级）》JD 初稿（城市：上海）：  【岗位职责】 1. 负责公司核心业务的 Java 后端工程师相关设计与开发 2. 参与需求评审，输出技术方案并推动落地 3. 与产品、测试协作，保障交付质量  【任职要求】 1. 中级及以上水平，相关经验 3~5 年 2. 具备良好的工程习惯与协作意识 3. 有复杂项目落地经验者优先  【加分项】 1. 有开源贡献 2. 有跨端经验  注：本内容为 AI 生成初稿，需人工确认后使用。如需调整级别或工作城市，请告知。", "duration_ms": 2034.83, "tokens": 0, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-b2b9b623", "parent_id": "sp-ef7cbeab", "type": "plan", "name": "context.build", "input": "帮我写一份 Java 后端工程师的 JD", "output": "注入 1 个工具", "duration_ms": 0.0, "tokens": 342, "status": "ok", "error": "", "meta": {"budget": {"total_tokens": 342, "budget_total": 6000, "utilization": 0.057, "sections": {"system": {"used": 291, "limit": 900, "ratio": 0.32}, "tools": {"used": 51, "limit": 1200, "ratio": 0.04}, "retrieval": {"used": 0, "limit": 1500, "ratio": 0.0}, "history": {"used": 0, "limit": 1800, "ratio": 0.0}, "observations": {"used": 0, "limit": 1800, "ratio": 0.0}}, "tools_selected": ["generate_jd"], "tools_dropped": [], "history_compacted": 0, "history_dropped": 0, "notes": ["工具命中: generate_jd=5 分"]}}}, {"span_id": "sp-635594cf", "parent_id": "sp-ef7cbeab", "type": "llm", "name": "planner.decide", "input": "【可用工具清单】 - generate_jd｜风险:low   用途: 根据岗位名称/级别/城市生成 JD 初稿   参数: role(岗位名称), level(级别，如中级), city(工作城市)   必填: role 【已收集信息】 （空） 【用户最新输入】 帮我写一份 Java 后端工程师的 JD 请只输出一个 JSON 对象。", "output": "{\"action\":\"CALL_TOOL\",\"tool\":\"generate_jd\",\"args\":{\"role\":\"Java 后端工程师\"},\"reason\":\"用户请求生成 Java 后端工程师的 JD，role 为必填且已提供，level 和 city 为可选参数，可直接生成初稿。\"}", "duration_ms": 738.63, "tokens": 422, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-2fda8e10", "parent_id": "sp-ef7cbeab", "type": "plan", "name": "plan[0] CALL_TOOL", "input": "用户请求生成 Java 后端工程师的 JD，role 为必填且已提供，level 和 city 为可选参数，可直接生成初稿。", "output": "generate_jd", "duration_ms": 0.0, "tokens": 0, "status": "ok", "error": "", "meta": {"tool": "generate_jd"}}, {"span_id": "sp-d1f81910", "parent_id": "sp-ef7cbeab", "type": "tool_call", "name": "tool:generate_jd", "input": "{'role': 'Java 后端工程师'}", "output": "{'title': 'Java 后端工程师（中级）', 'city': '上海', 'sections': {'岗位职责': ['负责公司核心业务的 Java 后端工程师 相关设计与开发', '参与需求评审，输出技术方案并推动落地', '与产品、测试协作，保障交付质量'], '任职要求': ['中级及以上水平，相关经验 3~5 年', '具备良好的工程习惯与协作意识', '有复杂项目落地经验者优先'], '加分项': ['有开源贡献', '有跨端经验']}, 'note': '本内容为 AI 生成初稿，需人工确认后使用'}", "duration_ms": 0.04, "tokens": 0, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-cb5cc0a2", "parent_id": "sp-ef7cbeab", "type": "llm", "name": "planner.decide", "input": "【可用工具清单】 - generate_jd｜风险:low   用途: 根据岗位名称/级别/城市生成 JD 初稿   参数: role(岗位名称), level(级别，如中级), city(工作城市)   必填: role 【已收集信息】 （空） 【已执行步骤与结果】 1. generate_jd -> {'title': 'Java 后端工程师（中级）', 'city': '上海', 'sect", "output": "{\"action\":\"FINISH\",\"answer\":\"已为你生成《Java 后端工程师（中级）》JD 初稿（城市：上海）：\\n\\n【岗位职责】\\n1. 负责公司核心业务的 Java 后端工程师相关设计与开发\\n2. 参与需求评审，输出技术方案并推动落地\\n3. 与产品、测试协作，保障交付质量\\n\\n【任职要求】\\n1. 中级及以上水平，相关经验 3~5 年\\n2. 具备良好的工程习惯与协作意识", "duration_ms": 1294.54, "tokens": 710, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-0b3ed2d9", "parent_id": "sp-ef7cbeab", "type": "plan", "name": "plan[1] FINISH", "input": "用户请求生成 Java 后端工程师 JD，已通过 generate_jd 工具生成初稿，任务完成。", "output": "已为你生成《Java 后端工程师（中级）》JD 初稿（城市：上海）：  【岗位职责】 1. 负责公司核心业务的 Java 后端工程师相关设计与开发 2. 参与需求评审，输出技术方案并推动落地 3. 与产品、测试协作，保障交付质量  【任职要求】 1. 中级及以上水平，相关经验 3~5 年 2. 具备良好的工程习惯与协作意识 3. 有复杂项目落地经验者优先  【加分项】 1. 有开源贡献 2. 有跨端经验  注：本内容为 AI 生成初稿，需人工确认后使用。如需调整级别或工作城市，请告知。", "duration_ms": 0.0, "tokens": 0, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-4b23dc7e", "parent_id": "sp-ef7cbeab", "type": "respond", "name": "respond", "input": "已为你生成《Java 后端工程师（中级）》JD 初稿（城市：上海）：  【岗位职责】 1. 负责公司核心业务的 Java 后端工程师相关设计与开发 2. 参与需求评审，输出技术方案并推动落地 3. 与产品、测试协作，保障交付质量  【任职要求】 1. 中级及以上水平，相关经验 3~5 年 2. 具备良好的工程习惯与协作意识 3. 有复杂项目落地经验者优先  【加分项】 1. 有开源贡献 2. 有跨端经验  注：本内容为 AI 生成初稿，需人工确认后使用。如需调整级别或工作城市，请告知。", "output": "", "duration_ms": 0.0, "tokens": 0, "status": "ok", "error": "", "meta": {}}]}}, {"id": 2, "input": "帮我筛一下简历", "concept": "缺前置条件 · 追问", "note": "没有 JD 就筛简历，必须追问而不是硬做（MISSING_PREREQUISITE）。", "status": "awaiting_input", "state": "AWAITING_INPUT", "message": "请提供要筛选的候选人姓名，以及对应的 JD 内容或标题。", "tools_called": [], "pending_tool": null, "tools_selected": ["screen_resume"], "tools_dropped": [], "trace": {"trace_id": "tr-f9204bbdbe0a", "spans": [{"span_id": "sp-d8661e6f", "parent_id": null, "type": "run", "name": "run", "input": "帮我筛一下简历", "output": "请提供要筛选的候选人姓名，以及对应的 JD 内容或标题。", "duration_ms": 854.89, "tokens": 0, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-4317ca26", "parent_id": "sp-d8661e6f", "type": "plan", "name": "context.build", "input": "帮我筛一下简历", "output": "注入 1 个工具", "duration_ms": 0.01, "tokens": 348, "status": "ok", "error": "", "meta": {"budget": {"total_tokens": 348, "budget_total": 6000, "utilization": 0.058, "sections": {"system": {"used": 291, "limit": 900, "ratio": 0.32}, "tools": {"used": 57, "limit": 1200, "ratio": 0.05}, "retrieval": {"used": 0, "limit": 1500, "ratio": 0.0}, "history": {"used": 0, "limit": 1800, "ratio": 0.0}, "observations": {"used": 0, "limit": 1800, "ratio": 0.0}}, "tools_selected": ["screen_resume"], "tools_dropped": [], "history_compacted": 0, "history_dropped": 0, "notes": ["工具命中: screen_resume=5 分"]}}}, {"span_id": "sp-b611f050", "parent_id": "sp-d8661e6f", "type": "llm", "name": "planner.decide", "input": "【可用工具清单】 - screen_resume｜风险:low   用途: 结合 JD 与评分标准给候选人简历打分，必须给出理由   参数: candidate(候选人姓名), jd(JD 内容或标题)   必填: candidate, jd 【已收集信息】 （空） 【用户最新输入】 帮我筛一下简历 请只输出一个 JSON 对象。", "output": "{\"action\":\"ASK_USER\",\"question\":\"请提供要筛选的候选人姓名，以及对应的 JD 内容或标题。\",\"missing\":[\"candidate\",\"jd\"],\"reason\":\"调用 screen_resume 需要 candidate 和 jd 两个必填参数，当前信息为空。\"}", "duration_ms": 854.37, "tokens": 417, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-174f920c", "parent_id": "sp-d8661e6f", "type": "plan", "name": "plan[0] ASK_USER", "input": "调用 screen_resume 需要 candidate 和 jd 两个必填参数，当前信息为空。", "output": "请提供要筛选的候选人姓名，以及对应的 JD 内容或标题。", "duration_ms": 0.0, "tokens": 0, "status": "ok", "error": "", "meta": {}}]}}, {"id": 3, "input": "给张三安排明天下午面试", "concept": "高风险动作 · 门控拦截", "note": "安排面试属高风险：门控拦下、只出草稿，人工确认后才真正执行。", "status": "awaiting_confirmation", "state": "AWAITING_CONFIRMATION", "message": "【需人工确认】即将执行高风险动作 schedule_interview。\n{'status': 'draft', 'preview': '将为 张三 安排面试，时间：明天下午', 'hint': '这是高风险动作，需人工确认后才会执行'}", "tools_called": [], "pending_tool": "schedule_interview", "tools_selected": ["schedule_interview"], "tools_dropped": [], "trace": {"trace_id": "tr-6c0b78eb5cae", "spans": [{"span_id": "sp-59b7c4b7", "parent_id": null, "type": "run", "name": "run", "input": "给张三安排明天下午面试", "output": "等待人工确认", "duration_ms": 1080.38, "tokens": 0, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-ba10273f", "parent_id": "sp-59b7c4b7", "type": "plan", "name": "context.build", "input": "给张三安排明天下午面试", "output": "注入 1 个工具", "duration_ms": 0.01, "tokens": 359, "status": "ok", "error": "", "meta": {"budget": {"total_tokens": 359, "budget_total": 6000, "utilization": 0.06, "sections": {"system": {"used": 291, "limit": 900, "ratio": 0.32}, "tools": {"used": 68, "limit": 1200, "ratio": 0.06}, "retrieval": {"used": 0, "limit": 1500, "ratio": 0.0}, "history": {"used": 0, "limit": 1800, "ratio": 0.0}, "observations": {"used": 0, "limit": 1800, "ratio": 0.0}}, "tools_selected": ["schedule_interview"], "tools_dropped": [], "history_compacted": 0, "history_dropped": 0, "notes": ["工具命中: schedule_interview=4 分"]}}}, {"span_id": "sp-f0ea114e", "parent_id": "sp-59b7c4b7", "type": "llm", "name": "planner.decide", "input": "【可用工具清单】 - schedule_interview｜风险:high   用途: 安排面试（高风险：会对外产生实际约定，需人工确认）   参数: candidate(候选人姓名), when(面试时间), confirmed(是否已人工确认)   必填: candidate, when 【已收集信息】 （空） 【用户最新输入】 给张三安排明天下午面试 请只输出一个 JSON 对象。", "output": "{\"action\":\"REQUEST_CONFIRM\",\"tool\":\"schedule_interview\",\"args\":{\"candidate\":\"张三\",\"when\":\"明天下午\"},\"reason\":\"安排面试为高风险动作，会对外产生实际约定，需人工确认后才能执行。\"}", "duration_ms": 1079.77, "tokens": 412, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-b73fdc40", "parent_id": "sp-59b7c4b7", "type": "plan", "name": "plan[0] REQUEST_CONFIRM", "input": "安排面试为高风险动作，会对外产生实际约定，需人工确认后才能执行。", "output": "schedule_interview", "duration_ms": 0.0, "tokens": 0, "status": "ok", "error": "", "meta": {"tool": "schedule_interview"}}, {"span_id": "sp-d9d3abe2", "parent_id": "sp-59b7c4b7", "type": "gate", "name": "gate:schedule_interview", "input": "{'candidate': '张三', 'when': '明天下午'}", "output": "{'status': 'draft', 'preview': '将为 张三 安排面试，时间：明天下午', 'hint': '这是高风险动作，需人工确认后才会执行'}", "duration_ms": 0.03, "tokens": 0, "status": "ok", "error": "", "meta": {}}]}, "confirm": {"message": "已确认并执行 schedule_interview：{'status': 'executed', 'candidate': '张三', 'when': '明天下午'}", "trace": {"trace_id": "tr-3a327a2b0f63", "spans": [{"span_id": "sp-a2780190", "parent_id": null, "type": "run", "name": "confirm", "input": "schedule_interview", "output": "{'status': 'executed', 'candidate': '张三', 'when': '明天下午'}", "duration_ms": 0.1, "tokens": 0, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-25ad964c", "parent_id": "sp-a2780190", "type": "tool_call", "name": "tool:schedule_interview", "input": "{'candidate': '张三', 'when': '明天下午', 'confirmed': True}", "output": "{'status': 'executed', 'candidate': '张三', 'when': '明天下午'}", "duration_ms": 0.02, "tokens": 0, "status": "ok", "error": "", "meta": {}}]}, "side_effect": {"scheduled": [{"candidate": "张三", "when": "明天下午"}], "sent": []}}}, {"id": 4, "input": "发邮件通知候选人面试时间", "concept": "缺信息 · 追问（发邮件不可逆）", "note": "发邮件不可逆，真模型先追问缺的收件人/主题/正文（MISSING_INFO），而不是盲目发送。门控（MISSING_CONFIRMATION）由场景 3 展示——两者共同构成「受控」。", "status": "awaiting_input", "state": "AWAITING_INPUT", "message": "请提供收件人邮箱、邮件主题与正文，以及候选人和面试时间。", "tools_called": [], "pending_tool": null, "tools_selected": ["send_email", "schedule_interview"], "tools_dropped": [], "trace": {"trace_id": "tr-ac9be1c4186f", "spans": [{"span_id": "sp-73f4d429", "parent_id": null, "type": "run", "name": "run", "input": "发邮件通知候选人面试时间", "output": "请提供收件人邮箱、邮件主题与正文，以及候选人和面试时间。", "duration_ms": 982.78, "tokens": 0, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-1c6ebff6", "parent_id": "sp-73f4d429", "type": "plan", "name": "context.build", "input": "发邮件通知候选人面试时间", "output": "注入 2 个工具", "duration_ms": 0.01, "tokens": 419, "status": "ok", "error": "", "meta": {"budget": {"total_tokens": 419, "budget_total": 6000, "utilization": 0.07, "sections": {"system": {"used": 291, "limit": 900, "ratio": 0.32}, "tools": {"used": 128, "limit": 1200, "ratio": 0.11}, "retrieval": {"used": 0, "limit": 1500, "ratio": 0.0}, "history": {"used": 0, "limit": 1800, "ratio": 0.0}, "observations": {"used": 0, "limit": 1800, "ratio": 0.0}}, "tools_selected": ["send_email", "schedule_interview"], "tools_dropped": [], "history_compacted": 0, "history_dropped": 0, "notes": ["工具命中: send_email=14 分，schedule_interview=4 分"]}}}, {"span_id": "sp-f8842974", "parent_id": "sp-73f4d429", "type": "llm", "name": "planner.decide", "input": "【可用工具清单】 - send_email｜风险:high   用途: 发送邮件（高风险：不可撤销，需人工确认）   参数: to(收件人), subject(主题), body(正文), confirmed(是否已人工确认)   必填: to, subject, body - schedule_interview｜风险:high   用途: 安排面试（高风险：会对外产生实际约定，需人工确认）  ", "output": "{\"action\":\"ASK_USER\",\"question\":\"请提供收件人邮箱、邮件主题与正文，以及候选人和面试时间。\",\"missing\":[\"to\",\"subject\",\"body\",\"candidate\",\"when\"],\"reason\":\"发送邮件与安排面试均为高风险动作，且当前缺少收件人、主题、正文、候选人及面试时间等必要信息，无法直接调用工具。\"}", "duration_ms": 982.06, "tokens": 499, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-7ea20ad2", "parent_id": "sp-73f4d429", "type": "plan", "name": "plan[0] ASK_USER", "input": "发送邮件与安排面试均为高风险动作，且当前缺少收件人、主题、正文、候选人及面试时间等必要信息，无法直接调用工具。", "output": "请提供收件人邮箱、邮件主题与正文，以及候选人和面试时间。", "duration_ms": 0.0, "tokens": 0, "status": "ok", "error": "", "meta": {}}]}}, {"id": 5, "input": "帮我查一下年假制度", "concept": "知识检索 · 自动完成", "note": "查制度走 search_knowledge，返回带来源的片段。", "status": "done", "state": "DONE", "message": "根据知识库检索结果（来源：员工手册.md）：年假按司龄计算，满 1 年 5 天，满 3 年 10 天。\n\n注：检索到的另一条结果（报销制度.md）与年假无关，已忽略。如需更详细的年假规定（如满 5 年及以上、请假流程等），当前资料未涵盖，建议补充查询或咨询 HR。", "tools_called": ["search_knowledge"], "pending_tool": null, "tools_selected": ["search_knowledge"], "tools_dropped": [], "trace": {"trace_id": "tr-a30b0049abf9", "spans": [{"span_id": "sp-f5723a07", "parent_id": null, "type": "run", "name": "run", "input": "帮我查一下年假制度", "output": "根据知识库检索结果（来源：员工手册.md）：年假按司龄计算，满 1 年 5 天，满 3 年 10 天。  注：检索到的另一条结果（报销制度.md）与年假无关，已忽略。如需更详细的年假规定（如满 5 年及以上、请假流程等），当前资料未涵盖，建议补充查询或咨询 HR。", "duration_ms": 1677.77, "tokens": 0, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-193b1363", "parent_id": "sp-f5723a07", "type": "plan", "name": "context.build", "input": "帮我查一下年假制度", "output": "注入 1 个工具", "duration_ms": 0.01, "tokens": 332, "status": "ok", "error": "", "meta": {"budget": {"total_tokens": 332, "budget_total": 6000, "utilization": 0.055, "sections": {"system": {"used": 291, "limit": 900, "ratio": 0.32}, "tools": {"used": 41, "limit": 1200, "ratio": 0.03}, "retrieval": {"used": 0, "limit": 1500, "ratio": 0.0}, "history": {"used": 0, "limit": 1800, "ratio": 0.0}, "observations": {"used": 0, "limit": 1800, "ratio": 0.0}}, "tools_selected": ["search_knowledge"], "tools_dropped": [], "history_compacted": 0, "history_dropped": 0, "notes": ["工具命中: search_knowledge=8 分"]}}}, {"span_id": "sp-91f864bb", "parent_id": "sp-f5723a07", "type": "llm", "name": "planner.decide", "input": "【可用工具清单】 - search_knowledge｜风险:low   用途: 检索公司制度知识库，返回带来源的片段   参数: query(检索问题)   必填: query 【已收集信息】 （空） 【用户最新输入】 帮我查一下年假制度 请只输出一个 JSON 对象。", "output": "{\"action\":\"CALL_TOOL\",\"tool\":\"search_knowledge\",\"args\":{\"query\":\"年假制度\"},\"reason\":\"用户明确要求查询年假制度，直接检索知识库即可\"}", "duration_ms": 619.51, "tokens": 387, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-bebf3a18", "parent_id": "sp-f5723a07", "type": "plan", "name": "plan[0] CALL_TOOL", "input": "用户明确要求查询年假制度，直接检索知识库即可", "output": "search_knowledge", "duration_ms": 0.0, "tokens": 0, "status": "ok", "error": "", "meta": {"tool": "search_knowledge"}}, {"span_id": "sp-eaf9f099", "parent_id": "sp-f5723a07", "type": "tool_call", "name": "tool:search_knowledge", "input": "{'query': '年假制度'}", "output": "{'query': '年假制度', 'hits': [{'source': '员工手册.md', 'snippet': '年假按司龄计算，满 1 年 5 天，满 3 年 10 天。'}, {'source': '报销制度.md', 'snippet': '差旅报销需在行程结束后 15 个工作日内提交。'}], 'note': '无依据时应明确说明资料不足，不硬编'}", "duration_ms": 0.02, "tokens": 0, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-b0d8d4ae", "parent_id": "sp-f5723a07", "type": "llm", "name": "planner.decide", "input": "【可用工具清单】 - search_knowledge｜风险:low   用途: 检索公司制度知识库，返回带来源的片段   参数: query(检索问题)   必填: query 【已收集信息】 （空） 【已执行步骤与结果】 1. search_knowledge -> {'query': '年假制度', 'hits': [{'source': '员工手册.md', 'snippet': '年假按", "output": "{\"action\":\"FINISH\",\"answer\":\"根据知识库检索结果（来源：员工手册.md）：年假按司龄计算，满 1 年 5 天，满 3 年 10 天。\\n\\n注：检索到的另一条结果（报销制度.md）与年假无关，已忽略。如需更详细的年假规定（如满 5 年及以上、请假流程等），当前资料未涵盖，建议补充查询或咨询 HR。\",\"reason\":\"已通过 search_knowledge 获取年假", "duration_ms": 1057.47, "tokens": 588, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-884a8e40", "parent_id": "sp-f5723a07", "type": "plan", "name": "plan[1] FINISH", "input": "已通过 search_knowledge 获取年假制度依据，可直接给出带来源的回答，任务完成。", "output": "根据知识库检索结果（来源：员工手册.md）：年假按司龄计算，满 1 年 5 天，满 3 年 10 天。  注：检索到的另一条结果（报销制度.md）与年假无关，已忽略。如需更详细的年假规定（如满 5 年及以上、请假流程等），当前资料未涵盖，建议补充查询或咨询 HR。", "duration_ms": 0.0, "tokens": 0, "status": "ok", "error": "", "meta": {}}, {"span_id": "sp-de94d805", "parent_id": "sp-f5723a07", "type": "respond", "name": "respond", "input": "根据知识库检索结果（来源：员工手册.md）：年假按司龄计算，满 1 年 5 天，满 3 年 10 天。  注：检索到的另一条结果（报销制度.md）与年假无关，已忽略。如需更详细的年假规定（如满 5 年及以上、请假流程等），当前资料未涵盖，建议补充查询或咨询 HR。", "output": "", "duration_ms": 0.0, "tokens": 0, "status": "ok", "error": "", "meta": {}}]}}]};
+const TYPE = {
+  run:       { label: '会话',    cls: 'run',   icon: '' },
+  llm:       { label: '模型规划', cls: 'llm',   icon: '' },
+  gate:      { label: '门控',    cls: 'gate',  icon: '' },
+  tool_call: { label: '工具执行', cls: 'tool',  icon: '' },
+  respond:   { label: '最终响应', cls: 'respond', icon: '' },
+  plan:      { label: '决策动作', cls: 'plan',  icon: '' },
+};
+function classify(s) {
+  if (s.type === 'plan' && s.name === 'context.build') return { label: '意图识别', cls: 'intent' };
+  if (s.type === 'plan' && (s.name || '').startsWith('plan.repair')) return { label: '修复重试', cls: 'repair' };
+  return TYPE[s.type] || { label: s.type, cls: 'plan' };
+}
+function stepsOf(trace) {
+  if (!trace || !trace.spans) return [];
+  return trace.spans.map((s, i) => {
+    const c = classify(s);
+    return { i, type: s.type, name: s.name, label: c.label, cls: c.cls,
+             input: s.input || '', output: s.output || '', dur: s.duration_ms,
+             tok: s.tokens || 0, status: s.status, err: s.error || '' };
+  });
+}
+
+let CUR = null;   // 当前场景
+let STEPS = [];   // 当前场景的步骤（含确认段）
+let IDX = -1;     // 当前高亮到的步
+let SPLIT = 0;    // 主链路步数（确认段从这之后开始）
+let timer = null;
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+}
+
+function renderScen(sc, idx) {
+  const a = document.createElement('button');
+  a.className = 'scen' + (CUR && CUR.id === sc.id ? ' active' : '');
+  a.innerHTML = '<span class="no">场景 ' + sc.id + '</span>' +
+                '<span class="t">' + esc(sc.input) + '</span>' +
+                '<span class="c">' + esc(sc.concept) + '</span>';
+  a.onclick = () => load(idx);
+  return a;
+}
+
+function load(idx) {
+  stopAuto();
+  const sc = DATA.scenarios[idx];
+  CUR = sc;
+  // 组装步骤：主链路 + 确认段（确认段在 SPLIT 之后）
+  STEPS = stepsOf(sc.trace);
+  SPLIT = STEPS.length;
+  if (sc.confirm) {
+    STEPS = STEPS.concat(stepsOf(sc.confirm.trace));
+  }
+  IDX = -1;
+  // 侧栏高亮
+  document.querySelectorAll('.scen').forEach((el, i) => el.classList.toggle('active', i === idx));
+  // 场景头
+  document.getElementById('scen-title').textContent = '场景 ' + sc.id + ' · ' + sc.concept;
+  document.getElementById('scen-note').textContent = sc.note;
+  document.getElementById('scen-input').textContent = sc.input;
+  document.getElementById('selected-tools').textContent = (sc.tools_selected.length ? sc.tools_selected.join('、') : '（无）');
+  updateResult();
+  next();
+}
+
+function renderSteps() {
+  const tl = document.getElementById('timeline');
+  tl.querySelectorAll('.step, .divider').forEach(e => e.remove());
+  STEPS.forEach((s, i) => {
+    // 确认段开始前插一条分界线
+    if (i === SPLIT && CUR.confirm) {
+      const d = document.createElement('li');
+      d.className = 'divider';
+      d.textContent = '── 人工确认后，动作才真正执行 ──';
+      tl.appendChild(d);
+    }
+    const li = document.createElement('li');
+    li.className = 'step' + (i < IDX ? ' done' : (i === IDX ? ' current' : ''));
+    const isGate = s.type === 'gate';
+    let io = '';
+    if (s.input) io += '<div class="io"><span class="k">in</span><code>' + esc(s.input) + '</code></div>';
+    if (s.output) io += '<div class="io"><span class="k">out</span><code>' + esc(s.output) + '</code></div>';
+    if (isGate) io += '<div class="gate-callout"><b>⚠ 高风险动作被拦下</b>：先出草稿，绝不直接执行，等人工确认。</div>';
+    const meta = (s.dur ? s.dur + 'ms' : '') + (s.tok ? ' · ' + s.tok + 'tok' : '');
+    li.innerHTML = '<span class="node"></span><div class="body">' +
+      '<div class="head"><span class="pill ' + s.cls + '">' + s.label + '</span>' +
+      '<span class="name">' + esc(s.name) + '</span>' +
+      '<span class="meta">' + meta + '</span></div>' + io + '</div>';
+    tl.appendChild(li);
+  });
+}
+
+function updateResult() {
+  const sc = CUR;
+  const st = document.getElementById('final-status');
+  st.className = 'st ' + sc.status;
+  st.textContent = sc.status;
+  document.getElementById('final-msg').textContent = sc.message;
+  const tools = document.getElementById('final-tools');
+  tools.textContent = '调用工具：' + (sc.tools_called.length ? sc.tools_called.join('、') : '（无）') +
+                      (sc.pending_tool ? ' ｜ 挂起待确认：' + sc.pending_tool : '');
+  if (sc.confirm) {
+    const se = sc.confirm.side_effect || {scheduled:[], sent:[]};
+    document.getElementById('confirm-msg').style.display = 'block';
+    document.getElementById('confirm-msg').textContent = '确认后：' + sc.confirm.message +
+      ' ｜ 副作用：已安排面试 ' + se.scheduled.length + ' 条、已发邮件 ' + se.sent.length + ' 条';
+  } else {
+    document.getElementById('confirm-msg').style.display = 'none';
+  }
+}
+
+function next() {
+  if (IDX < STEPS.length - 1) { IDX++; }
+  renderSteps();
+  const p = document.getElementById('progress');
+  p.textContent = '步骤 ' + (IDX + 1) + ' / ' + STEPS.length + (CUR && CUR.confirm && IDX >= SPLIT ? '（人工确认段）' : '');
+  document.getElementById('btn-prev').disabled = (IDX <= 0);
+  document.getElementById('btn-next').disabled = (IDX >= STEPS.length - 1);
+}
+function prev() {
+  if (IDX > 0) { IDX--; }
+  renderSteps();
+  const p = document.getElementById('progress');
+  p.textContent = '步骤 ' + (IDX + 1) + ' / ' + STEPS.length + (CUR && CUR.confirm && IDX >= SPLIT ? '（人工确认段）' : '');
+  document.getElementById('btn-prev').disabled = (IDX <= 0);
+  document.getElementById('btn-next').disabled = (IDX >= STEPS.length - 1);
+}
+function reset() { IDX = -1; renderSteps(); document.getElementById('progress').textContent = '步骤 0 / ' + STEPS.length; }
+function stopAuto() { if (timer) { clearInterval(timer); timer = null; } }
+function play() {
+  stopAuto();
+  if (IDX >= STEPS.length - 1) { reset(); }
+  timer = setInterval(() => { if (IDX >= STEPS.length - 1) { stopAuto(); } else { next(); } }, 900);
+}
+
+window.onload = function () {
+  document.getElementById('backend').textContent = DATA.backend;
+  document.getElementById('backend2').textContent = DATA.backend;
+  document.getElementById('sidefx').textContent = '每个场景都是独立会话（互不污染）；高风险动作只在人工确认后才真正落地——场景 3 的确认段能看到 schedule_interview 从 draft 变成 executed。';
+  const list = document.getElementById('scen-list');
+  DATA.scenarios.forEach((sc, i) => list.appendChild(renderScen(sc, i)));
+  document.getElementById('btn-prev').onclick = prev;
+  document.getElementById('btn-next').onclick = next;
+  document.getElementById('btn-reset').onclick = reset;
+  document.getElementById('btn-play').onclick = play;
+  load(0);
+};
+</script>
+</body>
+</html>

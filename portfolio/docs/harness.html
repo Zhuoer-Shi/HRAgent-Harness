@@ -181,6 +181,11 @@ python scripts/run_evals.py --live
 <li><strong>缺信息会追问，不瞎猜</strong> —— 没有 JD 就要筛简历</li>
 <li><strong>高风险动作必被拦下</strong> —— 安排面试 / 发邮件只出草稿，确认后才执行</li>
 </ol>
+<p>生成浏览器里可点击的交互式 Demo（面试官能直接体验）：</p>
+<pre><code class="language-bash">python scripts/build_demo_page.py          # Stub，不花钱、离线可复现
+python scripts/build_demo_page.py --live   # DeepSeek 真模型，数据更真实
+# 产出 portfolio/demo.html，双击即开，5 个场景逐步回放 Trace
+</code></pre>
 <h2 id="目录结构">目录结构</h2>
 <pre><code>HRAgent-Harness/
 ├── harness/              # 引擎（本项目本体）
@@ -204,7 +209,8 @@ python scripts/run_evals.py --live
 │   ├── tool_select_probe.py  # 工具选择探针（自证修复不是过拟合）
 │   ├── run_evals.py          # 评测入口（harness 主轨）
 │   ├── run_dify_eval.py      # M5 评测入口（Dify 对照轨；临时探针 _dify_probe.py 已删）
-│   └── build_trace_dashboard.py  # M6 从 traces.db 生成静态观测看板（失败归因）
+│   ├── build_trace_dashboard.py  # M6 从 traces.db 生成静态观测看板（失败归因）
+│   └── build_demo_page.py    # 跑 5 场景捕获真实 Trace，渲染可交互 demo 页（M6）
 ├── reports/
 │   ├── context_benchmark.md  # 基准测试报告
 │   ├── tool_select_probe.md  # 探针报告
@@ -218,6 +224,7 @@ python scripts/run_evals.py --live
 ├── docs/                 # PRD / ADR / 问题与解决记录 / 失败模式手册 / Prompt 迭代记录
 ├── portfolio/            # M6 作品集（纯静态，已发布）
 │   ├── index.html        # 首页（受控 HR Agent 定位 + 时间线 + 技术栈）
+│   ├── demo.html         # 可交互 Demo（5 场景 Trace 逐步回放，数据内嵌，自包含）
 │   └── docs/             # 交付物静态页（PRD+ADR / 代码 / 报告 / 调试日志 / Trace 看板 / 失败模式手册 / Prompt 迭代）
 ├── demo.py
 ├── .env.example          # 环境变量样例（复制为 .env 填真实 key；.env 已被忽略）
