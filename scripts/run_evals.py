@@ -63,6 +63,14 @@ def render_markdown(report: EvalReport, diff: dict | None) -> str:
         f"- 执行 **{len(report.executed)}** 条，跳过 **{len(report.skipped)}** 条"
         f"（用例总数 {report.total_cases}）"
     )
+    _u = report.usage or {}
+    if _u.get("llm_calls"):
+        lines.append(
+            f"- LLM 调用 **{_u['llm_calls']}** 次 ｜ token **{_u['total_tokens']}**"
+            f"（输入 {_u['prompt_tokens']} / 输出 {_u['completion_tokens']}）"
+            f" ｜ 耗时 {_u['latency_ms']:.0f} ms"
+            + (f" ｜ 调用异常 **{_u['llm_errors']}** 次" if _u.get("llm_errors") else "")
+        )
     lines.append("")
 
     lines.append("## 一、核心指标")
@@ -170,6 +178,14 @@ def main() -> int:
         flag = "OK " if got >= target - 1e-9 else "!! "
         print(f"  {flag}{label:<12} {_pct(got):>5}   目标 {_pct(target):>5}   {kind}")
     print(f"     用例通过率     {_pct(report.pass_rate):>5}")
+    _u = report.usage or {}
+    if _u.get("llm_calls"):
+        print(
+            f"     LLM 调用       {_u['llm_calls']:>5} 次 ｜"
+            f" token {_u['total_tokens']}（入 {_u['prompt_tokens']} / 出 {_u['completion_tokens']}）"
+            f" ｜ 耗时 {_u['latency_ms']:.0f} ms"
+            + (f" ｜ 异常 {_u['llm_errors']} 次" if _u.get("llm_errors") else "")
+        )
 
     print()
     print("【分类结果】")

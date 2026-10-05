@@ -18,7 +18,12 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from .tool_registry import RISK_HIGH, ToolRegistry, ToolSpec
+from .tool_registry import (
+    MIN_SELECT_SCORE,
+    RISK_HIGH,
+    ToolRegistry,
+    ToolSpec,
+)
 
 # CJK 字符范围（中日韩统一表意文字 + 扩展 A + 兼容表意文字）
 _CJK = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
@@ -133,24 +138,31 @@ class ContextManager:
         self,
         registry: ToolRegistry,
         budget: Optional[Budget] = None,
-        min_tool_score: int = 1,
+        min_score: int = MIN_SELECT_SCORE,
         keep_recent_messages: int = 4,
         max_observations: int = 6,
     ) -> None:
         self.registry = registry
         self.budget = budget or Budget()
-        self.min_tool_score = min_tool_score
+        self.min_score = min_score
         self.keep_recent_messages = keep_recent_messages
         self.max_observations = max_observations
 
     # ---------- 工具选择 ----------
 
-    def score_tools(self, user_input: str) -> List[Tuple[int, str, ToolSpec]]:
-        """关键词命中打分（轻量、可解释、不花钱）。"""
-        scored: List[Tuple[int, str, ToolSpec]] = []
+    def score_tools(
+        self, user_input: str
+    ) -> List[Tuple[int, str, ToolSpec, List[str]]]:
+        """
+        按意图给每个工具打分。
+
+        打分委托给 ToolSpec.match_score —— 注册表和上下文管理器共用同一套算法，
+        避免两处各写一份、迟早发散。
+        """
+        scored: List[Tuple[int, str, ToolSpec, List[str]]] = []
         for spec in self.registry.all():
-            score = sum(1 for kw in spec.keywords if kw and kw in user_input)
-            scored.append((score, spec.name, spec))
+            score, hits = spec.match_score(user_input)
+            scored.append((score, spec.name, spec, hits))
         scored.sort(key=lambda x: (-x[0], x[1]))
         return scored
 
@@ -163,13 +175,19 @@ class ContextManager:
         """
         notes: List[str] = []
         scored = self.score_tools(user_input)
-        relevant = [(s, n, sp) for s, n, sp in scored if s >= self.min_tool_score]
+        relevant = [(s, n, sp) for s, n, sp, _ in scored if s >= self.min_score]
 
-        # 一个都没命中：只给得分最高的 1 个，让模型能 FINISH 说"不支持"
-        if not relevant and scored:
-            s0, n0, sp0 = scored[0]
-            relevant = [(s0, n0, sp0)]
-            notes.append("无工具命中关键词，仅注入得分最高的 1 个（模型应 FINISH 说明不支持）")
+        # 一个都没达到门槛：宁可少做，不可乱做。
+        # 不塞不匹配的工具，让模型直接 FINISH 说明不支持，比把它往沟里带强。
+        if not relevant:
+            if scored:
+                s0, n0, _, _ = scored[0]
+                notes.append(
+                    f"无工具达到入选门槛（最高 {n0}={s0} 分，门槛 {self.min_score}），"
+                    f"本轮注入空工具清单，模型应 FINISH 说明不支持"
+                )
+            else:
+                notes.append("注册表为空，本轮无工具可注入")
 
         ordered: List[ToolSpec] = []
         seen = set()
@@ -177,11 +195,8 @@ class ContextManager:
             if name not in seen:
                 seen.add(name)
                 ordered.append(spec)
-        # 高风险工具强制注入：模型必须知道它们存在，否则会臆造能力
-        for spec in self.registry.all():
-            if spec.risk == RISK_HIGH and spec.name not in seen:
-                seen.add(spec.name)
-                ordered.append(spec)
+        # 注意：这里曾经无条件追加所有高风险工具（ISSUE-006），已移除。
+        # 高风险工具现在只在其自身得分达到门槛时才注入。
 
         limit = self.budget.limit("tools")
         picked: List[ToolSpec] = []
@@ -197,6 +212,12 @@ class ContextManager:
                 dropped.append(spec.name)
         if dropped:
             notes.append(f"工具分区预算不足，按相关性从低到高裁剪掉 {len(dropped)} 个")
+        if picked:
+            score_map = {name: score for score, name, _, _ in scored}
+            notes.append(
+                "工具命中: "
+                + "，".join(f"{p.name}={score_map.get(p.name, 0)} 分" for p in picked)
+            )
         return picked, dropped, used, notes
 
     # ---------- 历史压缩 ----------

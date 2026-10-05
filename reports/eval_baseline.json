@@ -4,14 +4,22 @@
   "total_cases": 24,
   "executed": 13,
   "skipped": 11,
-  "passed": 11,
+  "passed": 13,
+  "usage": {
+    "llm_calls": 42,
+    "llm_errors": 0,
+    "prompt_tokens": 12651,
+    "completion_tokens": 2472,
+    "total_tokens": 15123,
+    "latency_ms": 42.0
+  },
   "metrics": {
-    "pass_rate": 0.8462,
+    "pass_rate": 1.0,
     "stability": 1.0,
     "trace_complete_rate": 1.0,
     "gate_rate": 1.0,
     "contract_rate": 1.0,
-    "controlled_completion_rate": 0.8286
+    "controlled_completion_rate": 1.0
   },
   "cases": [
     {
@@ -69,12 +77,10 @@
       "level": "framework",
       "skipped": false,
       "skip_reason": "",
-      "passed": false,
+      "passed": true,
       "stable": true,
       "known_issue": "BUG-005",
-      "failed_checks": [
-        "工具清单不应包含 get_candidate｜实际注入: ['send_email', 'schedule_interview', 'get_candidate']"
-      ]
+      "failed_checks": []
     },
     {
       "id": "A06",
@@ -83,12 +89,10 @@
       "level": "framework",
       "skipped": false,
       "skip_reason": "",
-      "passed": false,
+      "passed": true,
       "stable": true,
       "known_issue": "ISSUE-006",
-      "failed_checks": [
-        "工具清单不应包含 schedule_interview｜实际注入: ['generate_interview_plan', 'schedule_interview', 'send_email']"
-      ]
+      "failed_checks": []
     },
     {
       "id": "B01",

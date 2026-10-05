@@ -1,12 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-上下文预算基准测试 —— 把 M2 相对 M1 的收益量化出来。
+上下文预算基准测试 —— 验证「ContextManager 是否真的省下了上下文」。
 
-对比两种做法：
-  M1（基线）：固定注入 top_k=5 个工具（相关性得分 0 的也被填进来）+ 历史对话全量拼接
-  M2（现在）：分区预算 + 相关性阈值 + 超预算按序裁剪 + 历史压缩/丢弃
+对比两个做法：
+  baseline（旧逻辑）：关键词计数打分 + 固定取 top_k=5（得分 0 也塞进来）
+                    + 高风险工具强制注入 + 历史对话全量拼接
+  now（当前逻辑）   ：强弱加权打分 + 全局阈值 + 不做强制注入
+                    + 分区预算裁剪 + 历史压缩/丢弃
 
-产出：终端表格 + reports/context_benchmark.md（作品集可直接引用）
+## 一条方法论约束（这个脚本曾经踩过坑）
+
+**baseline 必须自己实现，不许调用 registry.select_for_intent。**
+
+早期版本偷懒调了它，结果 M4 改造工具选择之后，baseline 那一栏也跟着变瘦了 ——
+所谓"对比"变成了跟一个不断变化��影子比，数字再漂亮也没有意义。
+
+所以这里把旧规则的关键词表原样抄进来（`LEGACY_KEYWORDS`），
+连同"计数打分 / 固定 top_k / 强制注入"三条旧规则一起复算。
+
+产出：终端表格 + reports/context_benchmark.md
 用法：python scripts/context_benchmark.py
 """
 
@@ -19,6 +31,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from harness.context import Budget, ContextManager, estimate_tokens  # noqa: E402
 from harness.planner import SYSTEM_PROMPT  # noqa: E402
+from harness.tool_registry import RISK_HIGH, ToolSpec  # noqa: E402
 from tools.hr_tools import build_registry  # noqa: E402
 
 SCENARIOS = [
@@ -28,6 +41,21 @@ SCENARIOS = [
     "发邮件通知候选人面试时间",
     "帮我查一下年假制度",
 ]
+
+# M1/M2 时期每个工具登记的关键词。原样保存，用于复算旧基线。
+LEGACY_KEYWORDS = {
+    "generate_jd": ["JD", "jd", "岗位描述", "招聘启事", "写一份"],
+    "generate_rubric": ["评分标准", "评分", "rubric", "维度"],
+    "screen_resume": ["筛", "简历", "评估", "打分", "筛选"],
+    "generate_interview_plan": ["面试方案", "面试问题", "面评", "方案", "问题"],
+    "search_knowledge": ["制度", "规定", "知识", "假期", "报销"],
+    "get_candidate": ["候选人", "状态", "查询"],
+    "draft_email": ["邮件草稿", "起草"],
+    "schedule_interview": ["安排面试", "约面试", "面试时间", "预约", "面试"],
+    "send_email": ["发邮件", "发通知", "邮件通知", "通知候选人"],
+}
+# 旧逻辑下被无条件注入的高风险工具
+LEGACY_FORCED_HIGH_RISK = ["schedule_interview", "send_email"]
 
 # 模拟一段逐步变长的对话历史
 BASE_HISTORY = [
@@ -52,33 +80,52 @@ def make_history(n: int):
     return out
 
 
-def m1_measure(registry, user_input, history):
-    """M1 做法：固定 top_k=5 注入 + 历史全量拼接。"""
-    specs = registry.select_for_intent(user_input, top_k=5)
+# ---------------------------------------------------------------------------
+# baseline：旧逻辑，全部在本地复算，不依赖当前 registry 的行为
+# ---------------------------------------------------------------------------
+
+def legacy_select(registry, user_input: str, top_k: int = 5):
+    """旧逻辑：关键词计数 -> 固定取前 top_k -> 再强制塞入高风险工具。"""
+
+    def score(spec: ToolSpec) -> int:
+        kws = LEGACY_KEYWORDS.get(spec.name, [])
+        return sum(1 for kw in kws if kw and kw in user_input)
+
+    all_specs = registry.all()
+    ranked = sorted(all_specs, key=lambda s: (-score(s), s.name))
+    picked = ranked[:top_k]
+    for name in LEGACY_FORCED_HIGH_RISK:
+        spec = registry.get(name)
+        if spec is not None and spec not in picked:
+            picked.append(spec)
+    return picked
+
+
+def baseline_measure(registry, user_input, history):
+    specs = legacy_select(registry, user_input)
     tools_text = registry.to_prompt(specs)
     hist_text = "\n".join(f"{m['role']}: {m['content']}" for m in history)
     return {
         "tools_tokens": estimate_tokens(tools_text),
         "history_tokens": estimate_tokens(hist_text),
-        "tool_count": len(specs),
         "tool_names": [s.name for s in specs],
     }
 
 
-def m2_measure(registry, user_input, history):
-    """M2 做法：分区预算 + 裁剪 + 压缩。"""
+# ---------------------------------------------------------------------------
+# now：当前逻辑
+# ---------------------------------------------------------------------------
+
+def now_measure(registry, user_input, history):
     cm = ContextManager(registry, Budget())
     pkg = cm.build(user_input=user_input, history=history, system_prompt=SYSTEM_PROMPT)
     r = pkg.to_report()
     return {
         "tools_tokens": r["sections"]["tools"]["used"],
         "history_tokens": r["sections"]["history"]["used"],
-        "tool_count": len(pkg.selected_tools),
-        "tool_names": pkg.selected_tools,
+        "tool_names": list(pkg.selected_tools),
         "compacted": pkg.history_compacted,
         "dropped": pkg.history_dropped,
-        "total": pkg.total_tokens,
-        "budget": pkg.budget.get("total", 0),
     }
 
 
@@ -88,61 +135,68 @@ def main() -> int:
     for text in SCENARIOS:
         for n in HISTORY_LEVELS:
             hist = make_history(n)
-            a = m1_measure(registry, text, hist)
-            b = m2_measure(registry, text, hist)
-            m1_total = a["tools_tokens"] + a["history_tokens"]
-            m2_total = b["tools_tokens"] + b["history_tokens"]
-            cut = 1 - (m2_total / m1_total) if m1_total else 0.0
-            rows.append(
-                {
-                    "scenario": text,
-                    "hist": n,
-                    "m1_tools": a["tools_tokens"],
-                    "m2_tools": b["tools_tokens"],
-                    "m1_hist": a["history_tokens"],
-                    "m2_hist": b["history_tokens"],
-                    "m1_total": m1_total,
-                    "m2_total": m2_total,
-                    "cut": cut,
-                    "m1_names": a["tool_names"],
-                    "m2_names": b["tool_names"],
-                    "compacted": b["compacted"],
-                    "dropped": b["dropped"],
-                }
-            )
+            a = baseline_measure(registry, text, hist)
+            b = now_measure(registry, text, hist)
+            base_total = a["tools_tokens"] + a["history_tokens"]
+            now_total = b["tools_tokens"] + b["history_tokens"]
+            cut = 1 - (now_total / base_total) if base_total else 0.0
+            rows.append({
+                "scenario": text,
+                "hist": n,
+                "base_tools": a["tools_tokens"],
+                "now_tools": b["tools_tokens"],
+                "base_hist": a["history_tokens"],
+                "now_hist": b["history_tokens"],
+                "base_total": base_total,
+                "now_total": now_total,
+                "cut": cut,
+                "base_names": a["tool_names"],
+                "now_names": b["tool_names"],
+                "compacted": b["compacted"],
+                "dropped": b["dropped"],
+            })
 
-    # ---- 终端输出 ----
-    print("=" * 100)
-    print("上下文预算对比：M1（固定 top_k 注入）vs M2（分区预算 + 裁剪 + 压缩）")
-    print("=" * 100)
-    print(f"{'场景':<26}{'历史':>4}{'M1工具':>8}{'M2工具':>8}{'M1历史':>8}{'M2历史':>8}{'M1合计':>8}{'M2合计':>8}{'降幅':>8}")
-    print("-" * 100)
+    print("=" * 108)
+    print("上下文占用对比：旧逻辑（计数+固定 top_k+强制注入） vs 当前（加权阈值+预算裁剪+历史压缩）")
+    print("=" * 108)
+    print(
+        f"{'场景':<26}{'历史':>4}{'旧工具':>8}{'新工具':>8}"
+        f"{'旧历史':>8}{'新历史':>8}{'旧合计':>8}{'新合计':>8}{'降幅':>8}"
+    )
+    print("-" * 108)
     for r in rows:
-        s = r["scenario"]
-        s = s if len(s) <= 24 else s[:24] + "…"
+        s = r["scenario"] if len(r["scenario"]) <= 24 else r["scenario"][:24] + "…"
         print(
-            f"{s:<26}{r['hist']:>4}{r['m1_tools']:>8}{r['m2_tools']:>8}"
-            f"{r['m1_hist']:>8}{r['m2_hist']:>8}{r['m1_total']:>8}{r['m2_total']:>8}{r['cut']:>7.0%}"
+            f"{s:<26}{r['hist']:>4}{r['base_tools']:>8}{r['now_tools']:>8}"
+            f"{r['base_hist']:>8}{r['now_hist']:>8}{r['base_total']:>8}"
+            f"{r['now_total']:>8}{r['cut']:>7.0%}"
         )
-    print("-" * 100)
+    print("-" * 108)
     avg_cut = sum(r["cut"] for r in rows) / len(rows)
+    avg_tools_base = sum(len(r["base_names"]) for r in rows if r["hist"] == 0) / max(
+        1, len([r for r in rows if r["hist"] == 0])
+    )
+    avg_tools_now = sum(len(r["now_names"]) for r in rows if r["hist"] == 0) / max(
+        1, len([r for r in rows if r["hist"] == 0])
+    )
     print(f"平均降幅: {avg_cut:.1%}")
+    print(f"注入工具数（历史 0 条时平均）: {avg_tools_base:.1f} → {avg_tools_now:.1f}")
     print()
 
-    print("工具注入对比（历史 0 轮时）")
+    print("工具注入对比（历史 0 条）")
     for r in rows:
         if r["hist"] == 0:
             print(f"  场景: {r['scenario']}")
-            print(f"    M1 注入 {len(r['m1_names'])} 个: {r['m1_names']}")
-            print(f"    M2 注入 {len(r['m2_names'])} 个: {r['m2_names']}")
+            print(f"    旧: {len(r['base_names'])} 个 {r['base_names']}")
+            print(f"    新: {len(r['now_names'])} 个 {r['now_names']}")
     print()
 
-    print("长会话下的历史处理（历史 24 条时）")
+    print("长会话下的历史处理（历史 24 条）")
     for r in rows:
         if r["hist"] == 24:
             print(
-                f"  场景: {r['scenario'][:20]:<22} 压缩 {r['compacted']} 条 / 丢弃 {r['dropped']} 条"
-                f"  → 历史 token {r['m1_hist']} → {r['m2_hist']}"
+                f"  {r['scenario'][:20]:<22} 压缩 {r['compacted']} 条 / 丢弃 {r['dropped']} 条"
+                f"  → 历史 token {r['base_hist']} → {r['now_hist']}"
             )
     print()
 
@@ -156,43 +210,47 @@ def main() -> int:
     lines = [
         "# 上下文预算基准测试",
         "",
-        "对比 M1（固定注入 top_k=5 个工具 + 历史全量拼接）与",
-        "M2（分区预算 + 相关性阈值 + 超预算裁剪 + 历史压缩）的上下文占用。",
+        "对比两代做法的上下文占用：",
         "",
-        "token 数为粗估值（CJK 按 1 字 ≈ 1 token，其余 4 字符 ≈ 1 token），用于预算控制而非精确计费。",
+        "- **旧逻辑**：关键词计数打分 + 固定取 `top_k=5`（得分 0 也塞进来）"
+        " + 高风险工具强制注入 + 历史对话全量拼接",
+        "- **当前**：强弱信号加权打分 + 全局阈值 + 不做强制注入"
+        " + 分区预算裁剪 + 历史压缩/丢弃",
         "",
-        f"**平均降幅：{avg_cut:.1%}**",
+        f"**平均降幅：{avg_cut:.1%}** ｜ 注入工具数平均 {avg_tools_base:.1f} → {avg_tools_now:.1f}",
         "",
-        "| 场景 | 历史条数 | M1 工具 | M2 工具 | M1 历史 | M2 历史 | M1 合计 | M2 合计 | 降幅 |",
+        "| 场景 | 历史条数 | 旧工具 | 新工具 | 旧历史 | 新历史 | 旧合计 | 新合计 | 降幅 |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for r in rows:
         lines.append(
-            f"| {r['scenario']} | {r['hist']} | {r['m1_tools']} | {r['m2_tools']} | "
-            f"{r['m1_hist']} | {r['m2_hist']} | {r['m1_total']} | {r['m2_total']} | {r['cut']:.0%} |"
+            f"| {r['scenario']} | {r['hist']} | {r['base_tools']} | {r['now_tools']} | "
+            f"{r['base_hist']} | {r['now_hist']} | {r['base_total']} | {r['now_total']} |"
+            f" {r['cut']:.0%} |"
         )
     lines += ["", "## 工具注入对比（历史 0 条）", ""]
     for r in rows:
         if r["hist"] == 0:
             lines.append(f"- **{r['scenario']}**")
-            lines.append(f"  - M1 注入 {len(r['m1_names'])} 个：{', '.join(r['m1_names'])}")
-            lines.append(f"  - M2 注入 {len(r['m2_names'])} 个：{', '.join(r['m2_names'])}")
+            lines.append(f"  - 旧：{len(r['base_names'])} 个 —— {', '.join(r['base_names'])}")
+            lines.append(f"  - 新：{len(r['now_names'])} 个 —— {', '.join(r['now_names']) or '（空）'}")
     lines += ["", "## 长会话表现（历史 24 条）", ""]
     for r in rows:
         if r["hist"] == 24:
             lines.append(
                 f"- **{r['scenario']}**：压缩 {r['compacted']} 条、丢弃 {r['dropped']} 条，"
-                f"历史 token {r['m1_hist']} → {r['m2_hist']}"
+                f"历史 token {r['base_hist']} → {r['now_hist']}"
             )
     lines += [
         "",
-        "## 说明",
+        "## 口径与限制（必读）",
         "",
-        "- 高风险工具（`schedule_interview` / `send_email`）在 M2 中受保护：",
-        "  即使超出工具分区预算也保留，避免模型因不知道它们存在而臆造能力。",
-        "  这是刻意的取舍：**安全优先于预算**。",
-        "- 历史分区与本轮执行结果共享额度，执行结果优先（它是当前决策的直接依据）。",
-        "- 用例与历史均由本项目自造，用于验证机制是否生效，不代表真实线上分布。",
+        "1. **旧基线是在本脚本里独立复算的**，不调用当前 `registry.select_for_intent`。",
+        "   这一点很关键：如果让基线跟着当前代码走，那对比就变成了跟自己比。",
+        "   脚本里保留了旧关键词表的副本（`LEGACY_KEYWORDS`）用于复算。",
+        "2. token 为粗估值（CJK 按 1 字 ≈ 1 token，其余 4 字符 ≈ 1 token），",
+        "   **用于预算控制与趋势观察，不做精确计费**。",
+        "3. 场景、历史、工具定义全部由本项目自造，**不代表真实线上分布**。",
         "",
     ]
 

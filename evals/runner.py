@@ -24,7 +24,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from harness.llm import BaseLLM, build_llm
+from harness.llm import BaseLLM, LLMResult, build_llm
 from harness.runner import (
     STATUS_AWAITING_CONFIRMATION,
     STATUS_FAILED,
@@ -84,6 +84,7 @@ class EvalReport:
     repeat: int
     total_cases: int
     results: List[CaseResult]
+    usage: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def executed(self) -> List[CaseResult]:
@@ -164,6 +165,7 @@ class EvalReport:
             "executed": len(self.executed),
             "skipped": len(self.skipped),
             "passed": len(self.passed_cases),
+            "usage": dict(self.usage),
             "metrics": {
                 "pass_rate": round(self.pass_rate, 4),
                 "stability": round(self.stability, 4),
@@ -197,6 +199,51 @@ def _all_registered(tools: List[str]) -> bool:
     return all(t in names for t in tools)
 
 
+class _CountingLLM(BaseLLM):
+    """
+    只做统计的透明包装：累计 token / 调用次数 / 耗时。
+
+    为什么需要它：跑真模型是要花钱的。没有用量统计，你既解释不清一次评测的成本，
+    也没法判断「指令/Baseline 改动」到底省了多少 token。
+
+    为什么不能把它交给 LLMJudge：裁判靠 llm.name 判断自己能不能用，
+    包装对象的 name 会让 Stub 伪装成一个可用裁判 —— 那就是自己给自己判卷。
+    """
+
+    name = "counting"
+
+    def __init__(self, inner: BaseLLM) -> None:
+        self.inner = inner
+        self.name = inner.name  # 对外保持透明
+        self.calls = 0
+        self.errors = 0
+        self.prompt_tokens = 0
+        self.completion_tokens = 0
+        self.latency_ms = 0.0
+
+    def complete(self, system: str, user: str, temperature: float = 0.0) -> LLMResult:
+        self.calls += 1
+        try:
+            result = self.inner.complete(system, user, temperature)
+        except Exception:
+            self.errors += 1
+            raise
+        self.prompt_tokens += result.prompt_tokens
+        self.completion_tokens += result.completion_tokens
+        self.latency_ms += result.latency_ms
+        return result
+
+    def summary(self) -> Dict[str, Any]:
+        return {
+            "llm_calls": self.calls,
+            "llm_errors": self.errors,
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+            "total_tokens": self.prompt_tokens + self.completion_tokens,
+            "latency_ms": round(self.latency_ms, 1),
+        }
+
+
 class EvalRunner:
     def __init__(
         self,
@@ -208,6 +255,8 @@ class EvalRunner:
     ) -> None:
         self.llm = llm or build_llm(backend)
         self.backend = self.llm.name
+        # AgentRunner 用包装版（累计用量），LLMJudge 必须用原版。
+        self.counter = _CountingLLM(self.llm)
         self.repeat = repeat
         self.save_traces = save_traces
         self.root = root
@@ -221,9 +270,20 @@ class EvalRunner:
         SCHEDULED_INTERVIEWS.clear()
         SENT_EMAILS.clear()
         registry = build_registry()
-        runner = AgentRunner(self.llm, registry, max_steps=6, auto_confirm=False)
+        runner = AgentRunner(self.counter, registry, max_steps=6, auto_confirm=False)
 
-        result = runner.run(case.user_input)
+        try:
+            result = runner.run(case.user_input)
+        except Exception as e:  # noqa: BLE001
+            # 网络抖动、配额耗尽、模型返回不可解析内容 —— 这些只该毁掉这一轮，
+            # 不该让整份评测连报告都出不来。接真模型之后这条尤其重要。
+            return RunRecord(
+                round=round_idx,
+                status="error",
+                passed=False,
+                failed=[f"运行异常｜{type(e).__name__}: {str(e)[:120]}"],
+                reason=f"本轮因异常未产出结果：{type(e).__name__}",
+            )
 
         # 需要验证「确认后才落地」的用例，走一次人工确认
         confirm_executed = False
@@ -322,6 +382,7 @@ class EvalRunner:
             repeat=self.repeat,
             total_cases=len(cases),
             results=results,
+            usage=self.counter.summary(),
         )
 
 

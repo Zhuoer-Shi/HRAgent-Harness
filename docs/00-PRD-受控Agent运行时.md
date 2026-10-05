@@ -6,7 +6,7 @@
 | 项目代号 | **HRAH**（HRAgent Harness） |
 | 一句话定位 | 一个自己写的 Agent 运行时 + 一套给它打分的评测体系，用 HR 招聘场景验证 |
 | 文档版本 | v0.1（草稿） |
-| 状态 | 开发中 · M2 上下文管理与会话状态机已实现 |
+| 状态 | 开发中 · M4 工具选择策略已重构并通过回归；接 DeepSeek 真模型待 API Key |
 | 日期 | 2026-10-05 |
 | 性质声明 | **个人独立项目**，非公司产品，未上生产，无真实企业用户与流量 |
 
@@ -447,9 +447,9 @@ IDLE ──> INTENT_RESOLVED ──> PLANNING ──> EXECUTING ──> DONE
 |---|---|---|
 | M0 | PRD + 仓库初始化 | ✅ 完成：本文档、README、`.gitignore` |
 | M1 | 引擎骨架 | ✅ 完成：`tool_registry` / `planner` / `tracer` / `runner` 四场景跑通，含人工门控 |
-| M2 | 上下文与状态 | ✅ 完成：`context.py`（分区预算+裁剪+压缩）、`state.py`（显式转移表）；基准测试平均降幅 36%，见 `reports/context_benchmark.md` |
+| M2 | 上下文与状态 | ✅ 完成：`context.py`（分区预算+裁剪+压缩）、`state.py`（显式转移表）；基准测试平均降幅 36%；M4 后以冻结基线复算为 52.8%、注入工具数 6.4→1.2，见 `reports/context_benchmark.md` |
 | M3 | 评测体系 | ✅ 完成：`evals/`（24 条用例 / 规则+LLM 双裁判 / 重复运行 / baseline 回归 / Trace 落盘）；Stub 下跑 13 条×3 轮，硬指标三项 100%，可控完成率 83%，见 `reports/eval_latest.md` |
-| M4 | 场景挂接 | 4 个 HR 任务跑通，接真实模型 |
+| M4 | 工具选择策略重构 + 接真实模型 | 🔶 策略部分已完成（`docs/02-ADR-工具选择策略.md`）：强弱加权打分 + 取消高风险强制注入；A05/A06 转绿、通过率 85%→100%、探针 18/18、上下文平均降幅 52.8%（见 `reports/context_benchmark.md`）。接 DeepSeek 真模型待 API Key |
 | M5 | Dify 对照 | 云端工作流 + 对比报告 + ADR |
 | M6 | 作品集 | 网站（内容全部来自真实产物）|
 

@@ -156,6 +156,8 @@ def build_registry() -> ToolRegistry:
         risk=RISK_LOW,
         returns="JD 结构化初稿",
         keywords=["JD", "jd", "岗位描述", "招聘启事", "写一份"],
+        # 强信号：JD 是区分度极高的专有名词；"写一份…岗位"覆盖省略 JD 的说法
+        strong=["JD", "jd", "岗位描述", "招聘启事", r"写[一1]?份.{0,12}?(岗位|JD|jd|招聘)"],
         impl=generate_jd,
     ))
     reg.register(ToolSpec(
@@ -165,7 +167,8 @@ def build_registry() -> ToolRegistry:
         required=["role"],
         risk=RISK_LOW,
         returns="评分维度与权重",
-        keywords=["评分标准", "评分", "rubric", "维度"],
+        keywords=["评分标准", "评分", "rubric", "维度", "权重", "打分"],
+        strong=["评分标准", "评分维度", "评分表", "打分标准", "rubric", "Rubric"],
         impl=generate_rubric,
     ))
     reg.register(ToolSpec(
@@ -176,6 +179,13 @@ def build_registry() -> ToolRegistry:
         risk=RISK_LOW,
         returns="总分 + 维度分 + 理由",
         keywords=["筛", "简历", "评估", "打分", "筛选"],
+        # 中文的「动词 + 宾语」常常不连续：打个分 / 评个分 / 筛一下简历。
+        # 所以中间允许插入 0~2 个虚字，这条规矩对所有工具通用。
+        strong=[
+            r"筛.{0,4}?简历",
+            r"评估.{0,8}?简历",
+            r"简历.{0,8}?(打分|评分|评估|看看|评.{0,2}?分|打.{0,2}?分|给.{0,3}?分)",
+        ],
         impl=screen_resume,
     ))
     reg.register(ToolSpec(
@@ -185,7 +195,8 @@ def build_registry() -> ToolRegistry:
         required=["candidate", "role"],
         risk=RISK_LOW,
         returns="面试目标/流程/问题/风险点",
-        keywords=["面试方案", "面试问题", "面评", "方案", "问题"],
+        keywords=["方案", "问题"],
+        strong=["面试方案", "面试问题", "面评", "面试流程", "面试提纲", "面试大纲", r"准备.{0,10}?面试"],
         impl=generate_interview_plan,
     ))
     reg.register(ToolSpec(
@@ -195,7 +206,8 @@ def build_registry() -> ToolRegistry:
         required=["query"],
         risk=RISK_LOW,
         returns="命中片段 + 来源",
-        keywords=["制度", "规定", "知识", "假期", "报销"],
+        keywords=["制度", "规定", "知识", "假期", "报销", "查询", "查一下"],
+        strong=["制度", "规定", "政策", "年假", "报销", "假期", "手册", "考勤", "福利"],
         impl=search_knowledge,
     ))
     reg.register(ToolSpec(
@@ -206,6 +218,10 @@ def build_registry() -> ToolRegistry:
         risk=RISK_LOW,
         returns="候选人状态",
         keywords=["候选人", "状态", "查询"],
+        # 强信号必须是「候选人 + 具体属性」，裸词「候选人」留在弱信号里。
+        # 这是 BUG-005 的根因修复：「发邮件通知候选人面试时间」里有「候选人」三个字，
+        # 但它显然不是在问候选人状态，弱信号单独出现不构成足够证据。
+        strong=["候选人状态", "候选人进度", "候选人情况", r"候选人.{0,6}?(状态|进展|进度|情况|资料|信息)"],
         impl=get_candidate,
     ))
     reg.register(ToolSpec(
@@ -215,7 +231,8 @@ def build_registry() -> ToolRegistry:
         required=["to", "subject", "body"],
         risk=RISK_MEDIUM,
         returns="邮件草稿",
-        keywords=["邮件草稿", "起草"],
+        keywords=["邮件草稿", "起草", "草稿"],
+        strong=["邮件草稿", "起草邮件", "拟一封邮件", "拟一封"],
         impl=draft_email,
     ))
     reg.register(ToolSpec(
@@ -225,7 +242,20 @@ def build_registry() -> ToolRegistry:
         required=["candidate", "when"],
         risk=RISK_HIGH,
         returns="安排结果或草稿预览",
-        keywords=["安排面试", "约面试", "面试时间", "预约", "面试"],
+        keywords=["安排面试", "约面试", "预约", "面试", "排期"],
+        # 强信号用「动词 + 面试」的间隔正则：能吃下「安排明天下午面试」这类表达，
+        # 这是 BUG-004 的修复（早期要求"安排面试"必须连续，导致漏选）。
+        # 裸词「面试」降到弱信号 —— 一句话里出现「面试」不等于要排面试，
+        # 「准备一下 Java 岗的面试问题」就不会再把排面试摆上桌（ISSUE-006 的另一面）。
+        strong=[
+            r"安排.{0,10}?面试",
+            r"约.{0,10}?面试",
+            r"预约.{0,10}?面试",
+            r"定.{0,10}?面试",
+            "面试时间",
+            "排期",
+            "改期",
+        ],
         impl=schedule_interview,
     ))
     reg.register(ToolSpec(
@@ -235,7 +265,16 @@ def build_registry() -> ToolRegistry:
         required=["to", "subject", "body"],
         risk=RISK_HIGH,
         returns="发送结果或草稿预览",
-        keywords=["发邮件", "发通知", "邮件通知", "通知候选人"],
+        keywords=["发邮件", "发通知", "邮件通知", "通知候选人", "邮件", "通知", "发送"],
+        # 「动词 + 邮件/通知」的间隔正则，同时覆盖「把面试通知发出去」这种倒装说法。
+        strong=[
+            r"发.{0,8}?邮件",
+            r"发送.{0,8}?邮件",
+            "邮件通知",
+            r"发.{0,8}?通知",
+            r"通知.{0,4}?发",
+            "群发",
+        ],
         impl=send_email,
     ))
 
