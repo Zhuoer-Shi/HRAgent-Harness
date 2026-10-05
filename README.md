@@ -48,7 +48,9 @@ python scripts/run_evals.py --save-baseline
 python scripts/run_evals.py --baseline
 
 # 接真实模型跑全部 24 条（含 LLM 裁判，需要环境变量）
+# 先复制 .env.example 为 .env 并填入真实值（.env 已被 .gitignore 忽略）
 export DEEPSEEK_API_KEY=sk-xxx
+export DIFY_API_KEY=app-xxx   # 跑 Dify 对照轨时才需要
 python demo.py --live
 python scripts/run_evals.py --live
 ```
@@ -99,7 +101,9 @@ HRAgent-Harness/
 ├── portfolio/            # M6 作品集（纯静态，已发布）
 │   ├── index.html        # 首页（受控 HR Agent 定位 + 时间线 + 技术栈）
 │   └── docs/             # 交付物静态页（PRD+ADR / 代码 / 报告 / 调试日志 / Trace 看板 / 失败模式手册 / Prompt 迭代）
-└── demo.py
+├── demo.py
+├── .env.example          # 环境变量样例（复制为 .env 填真实 key；.env 已被忽略）
+└── LICENSE               # MIT
 ```
 
 ## 三个核心设计
