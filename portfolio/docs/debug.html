@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>调试日志 · HRAgent Harness</title>
+<style>
+  :root {
+    --ink-900:#0A0F1A; --ink-800:#101828; --paper:#F7F8FA; --card:#FFFFFF;
+    --line:#E6E8EE; --text-hi:#101828; --text-mid:#475467; --text-low:#667085;
+    --accent:#0E7490; --accent-bright:#22D3EE; --accent-soft:#E0F2FE;
+    --warn:#B45309; --warn-soft:#FEF3C7; --bad:#B91C1C; --bad-soft:#FEE2E2;
+    --radius-sm:9px;
+    --font-ui:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    --font-mono:"SF Mono","JetBrains Mono","Consolas",monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:var(--font-ui); background:var(--paper); color:var(--text-hi); line-height:1.75; font-size:15px; }
+  .doc-nav { position:sticky; top:0; z-index:20; background:rgba(10,15,26,.9); backdrop-filter:blur(8px); border-bottom:1px solid rgba(255,255,255,.08); }
+  .doc-nav .inner { max-width:860px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:16px; }
+  .doc-nav a { color:var(--accent-bright); text-decoration:none; font-size:14px; font-family:var(--font-mono); }
+  .doc-nav a:hover { text-decoration:underline; }
+  .doc-nav .t { color:#fff; font-weight:600; font-size:14px; }
+  article.markdown { max-width:860px; margin:0 auto; padding:40px 24px 96px; }
+  .markdown h1 { font-size:30px; letter-spacing:-0.5px; margin:0 0 8px; padding-bottom:12px; border-bottom:2px solid var(--line); }
+  .markdown h2 { font-size:24px; margin:44px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+  .markdown h3 { font-size:19px; margin:30px 0 10px; }
+  .markdown h4 { font-size:16px; margin:22px 0 8px; color:var(--text-mid); }
+  .markdown p { margin:12px 0; }
+  .markdown a { color:var(--accent); }
+  .markdown code { font-family:var(--font-mono); font-size:13px; background:var(--paper); border:1px solid var(--line); padding:1px 6px; border-radius:5px; color:#0E7490; }
+  .markdown pre { background:var(--ink-800); color:#D6DEE9; border-radius:var(--radius-sm); padding:16px 18px; overflow-x:auto; line-height:1.65; }
+  .markdown pre code { background:none; border:none; padding:0; color:inherit; font-size:13px; }
+  .markdown blockquote { margin:16px 0; border-left:4px solid var(--accent); background:var(--accent-soft); padding:12px 18px; border-radius:0 var(--radius-sm) var(--radius-sm) 0; color:var(--ink-800); }
+  .markdown blockquote p { margin:4px 0; }
+  .markdown table { width:100%; border-collapse:collapse; font-size:14px; background:var(--card); border:1px solid var(--line); border-radius:var(--radius-sm); overflow:hidden; margin:16px 0; }
+  .markdown th, .markdown td { text-align:left; padding:10px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .markdown th { background:var(--paper); color:var(--text-mid); font-weight:600; font-size:13px; }
+  .markdown tr:last-child td { border-bottom:none; }
+  .markdown ul, .markdown ol { margin:10px 0; padding-left:24px; }
+  .markdown li { margin:5px 0; }
+  .markdown hr { border:none; border-top:1px solid var(--line); margin:32px 0; }
+  .markdown img { max-width:100%; }
+</style>
+</head>
+<body>
+<div class="doc-nav"><div class="inner"><a href="../index.html">← 返回作品集</a><span class="t">调试日志</span></div></div>
+<article class="markdown">
+<h1>问题与解决记录（调试日志）</h1>
+<blockquote>
+<p><strong>用途</strong>：记录开发过程中真实遇到的问题、定位过程、修复方式与教训。
+这份文档有两个价值——
+1. 防止同一个坑踩第二次
+2. <strong>面试素材</strong>：讲"我遇到过什么问题、怎么定位的"比讲"我做了什么"可信得多</p>
+<p><strong>记录规则</strong>：每修一个问题就追加一条，写清"现象 / 定位 / 原因 / 修复 / 教训"。
+<strong>诚实标注</strong>：<code>发现方式</code> 一栏如实填写是自己发现的还是他人协助定位的，不要含糊。</p>
+</blockquote>
+<hr />
+<h2>记录模板</h2>
+<pre><code class="language-markdown">### BUG-00X · 一句话标题
+- 日期：
+- 发现方式：自己发现 / 协助调试发现
+- 现象：
+- 定位过程：
+- 原因：
+- 修复：
+- 教训：
+</code></pre>
+<hr />
+<h2>BUG-001 · 提示语污染了工具入参</h2>
+<ul>
+<li><strong>日期</strong>：2026-10-05</li>
+<li><strong>发现方式</strong>：自己发现（跑 demo 场景 5 时看到输出异常）</li>
+<li><strong>现象</strong>：
+  用户说"帮我查一下年假制度"，工具收到的 query 却是：
+  <code>'帮我查一下年假制度\n请只输出一个 JSON 对象。'</code>
+  把写给模型看的提示语尾巴一起传进去了。功能能跑通，但数据在悄悄变脏。</li>
+<li><strong>定位过程</strong>：
+  1. 确认输出异常 → 工具入参不对
+  2. 看 <code>harness/llm.py</code> 的 <code>_decide()</code>，发现 <code>search_knowledge</code> 分支写的是 <code>{"query": u}</code>
+  3. 追 <code>u</code> 的来源：<code>_route()</code> 从 <code>【用户最新输入】</code> 之后截取全部内容，包含 planner 拼的尾句</li>
+<li><strong>原因</strong>：
+  planner 组装 prompt 时在末尾追加了 <code>请只输出一个 JSON 对象。</code>，
+  而 Stub 的入参解析直接整段截取，没有剥离提示语。</li>
+<li><strong>修复</strong>：
+  <code>python
+  # harness/llm.py  _decide()
+  u = (user or "").split("请只输出一个 JSON 对象")[0].strip()</code></li>
+<li><strong>教训</strong>：
+  <strong>模型看到的文本 ≠ 用户说的话。</strong> 两者必须在解析层显式分离。
+  这类问题不会报错、不会崩溃，只会让数据慢慢变脏——是最容易被忽略的一类 bug。
+  面试可讲："我调试时发现提示语污染了工具入参，功能是对的，但传进去的数据是脏的。"</li>
+</ul>
+<hr />
+<h2>BUG-002 · 共享 session 导致后续场景被短路</h2>
+<ul>
+<li><strong>日期</strong>：2026-10-05</li>
+<li><strong>发现方式</strong>：协助调试发现（AI 跑 demo 时发现所有场景结果相同）</li>
+<li><strong>现象</strong>：
+  4 个场景全部返回 <code>done</code>，场景 2/3/4 应该分别是追问、待确认，却都被判成"已完成"。</li>
+<li><strong>定位过程</strong>：
+  1. 观察：只有第一个场景是真的执行了工具
+  2. 追 <code>runner.run()</code> → <code>session.observations</code> 是实例级共享的
+  3. Stub 的策略是"只要看到 <code>【已执行步骤与结果】</code> 就 FINISH"
+  4. 场景 1 执行后 observations 非空 → 场景 2/3/4 一进来就被 FINISH</li>
+<li><strong>原因</strong>：
+  demo 复用同一个 <code>AgentRunner</code>（同一个 session），上一轮的 observations 串到了下一轮。</li>
+<li><strong>修复</strong>：
+  <code>python
+  # demo.py：每个场景独立会话
+  for i, text in enumerate(SCENARIOS, 1):
+      runner = AgentRunner(llm, registry, max_steps=6, auto_confirm=False)</code></li>
+<li><strong>教训</strong>：
+  <strong>评测与演示必须保证用例之间状态隔离</strong>，否则指标全部失真。
+  这条后来会成为评测框架的一条硬约束：每条用例独立 runner。</li>
+</ul>
+<hr />
+<h2>BUG-003 · 关键词歧义导致意图误判</h2>
+<ul>
+<li><strong>日期</strong>：2026-10-05</li>
+<li><strong>发现方式</strong>：协助调试发现（AI 跑 demo 时发现场景 3/4 路由错误）</li>
+<li><strong>现象</strong>：</li>
+<li>"给张三安排明天下午面试" → 没匹配上，走了兜底 FINISH</li>
+<li>"发邮件通知候选人面试时间" → 被判成"安排面试"（因为含"面试时间"）</li>
+<li><strong>定位过程</strong>：
+  1. 看 <code>StubLLM._decide()</code> 的分支顺序
+  2. <code>schedule_interview</code> 的关键词含"面试时间"，抢在邮件分支前面命中
+  3. "安排明天下午面试"不含连续的"安排面试"，所以匹配失败</li>
+<li><strong>原因</strong>：
+  关键词设计太具体（要连续匹配）且分支顺序不合理。</li>
+<li><strong>修复</strong>：
+  <code>python
+  # 1. 邮件分支前置（含"邮件"优先判定）
+  # 2. 安排面试改为组合判断，不再要求连续字符串
+  if "面试" in u and any(k in u for k in ("安排", "约", "预约", "定", "排期")):</code></li>
+<li><strong>教训</strong>：
+  <strong>意图路由的分支顺序就是隐式优先级</strong>，必须显式设计并写注释说明为什么这么排。
+  真实场景里这应该用意图分类器 + 评测集来验证，而不是堆关键词。</li>
+</ul>
+<hr />
+<h2>BUG-004 · 关键词间隔表达导致工具漏选（M2 上下文管理阶段暴露）</h2>
+<ul>
+<li><strong>日期</strong>：2026-10-05</li>
+<li><strong>发现方式</strong>：自己发现（跑 <code>demo.py --context</code> 时看到备注"无工具命中关键词"）</li>
+<li><strong>现象</strong>：
+  M2 上线后，场景 3「给张三安排明天下午面试」的上下文账本打出一条备注：
+  <code>备注: 无工具命中关键词，仅注入得分最高的 1 个（模型应 FINISH 说明不支持）
+  注入工具: ['draft_email', 'schedule_interview', 'send_email']</code>
+  明明是要安排面试，<code>schedule_interview</code> 却是靠"高风险工具保护规则"兜底进去的，
+  不是靠意图匹配进去的。<strong>功能没坏，但意图筛选这一段实际是失效的。</strong></li>
+<li><strong>定位过程</strong>：
+  1. 看账本备注 → 一个工具都没命中
+  2. 查 <code>tools/hr_tools.py</code> 里 <code>schedule_interview</code> 的 keywords：
+     <code>["安排面试", "约面试", "面试时间", "预约"]</code>
+  3. 用户输入是「给张三安排明天下午面试」——"安排"和"面试"中间隔了 5 个字，
+     四个关键词<strong>没有一个能连续命中</strong>
+  4. 对比：Stub 之所以还能正确调工具，是因为 BUG-003 修过组合判断，
+     <strong>兜底逻辑掩盖了筛选逻辑的缺陷</strong></li>
+<li><strong>原因</strong>：
+  字面关键词匹配要求连续子串，对"动词 + 插入语 + 名词"这种自然语言表达天然不兼容。</li>
+<li><strong>修复</strong>：
+  <code>python
+  # tools/hr_tools.py
+  schedule_interview:      keywords=[..., "面试"]     # 补一个宽口径词
+  generate_interview_plan: keywords=[..., "方案", "问题"]  # 同时补特征词，避免被"面试"抢走</code>
+  靠"命中数量打分"来区分：「安排…面试」只有 schedule 命中 1 次；
+  「生成面试方案」plan 命中 2 次（面试方案 + 方案）→ plan 胜出。</li>
+<li><strong>教训（这条很值钱）</strong>：
+  1. <strong>兜底逻辑会掩盖主逻辑的缺陷</strong>。如果不是 M2 把"注入了哪些工具、为什么"
+     显式打进账本，这个失效会一直躲在"反正功能是对的"后面。
+     → 这就是<strong>可观测性的直接收益</strong>：不是等它炸，而是让它主动告诉你哪里在退化。
+  2. 关键词匹配只是过渡方案。M4 接真模型时应换成 embedding 相似度，
+     并用评测集的"意图识别准确率"来量化换与不换的差别。
+  3. 面试可讲："我做完上下文预算之后，账本里一条备注暴露了意图筛选其实是失效的——
+     这个 bug 之前一直被兜底逻辑盖住了。"</li>
+</ul>
+<hr />
+<h2>BUG-005 · 关键词过宽导致误注入无关工具（与 BUG-004 同根因的另一面）</h2>
+<ul>
+<li><strong>日期</strong>：2026-10-05</li>
+<li><strong>发现方式</strong>：协助定位（用户复查 <code>demo.py --context</code> 账本后问"这个结果对吗"，核对时发现）</li>
+<li><strong>现象</strong>：
+  场景 4「发邮件通知候选人面试时间」注入了 3 个工具：
+  <code>注入工具: ['send_email', 'schedule_interview', 'get_candidate']</code>
+  其中 <code>get_candidate</code>（查候选人状态）跟"发面试通知"这件事毫无关系，属于误注入。</li>
+<li><strong>定位过程</strong>：
+  1. 逐个核对被注入工具的关键词命中来源
+  2. <code>get_candidate</code> 的 keywords 含「候选人」——而用户句子里正好有"候选人"三个字
+  3. 同理 <code>schedule_interview</code> 的 keywords 含「面试」——"面试时间"也被它吃掉</li>
+<li><strong>原因</strong>：
+  BUG-004 修漏选时补进了「面试」「方案」「问题」这类宽口径词，
+  代价是误命中率上升。<strong>漏选和误选是同一根因的两面</strong>：
+  字面匹配没有语义，"候选人"既可能是查询意图，也可能只是句子的宾语。</li>
+<li><strong>修复（M3 时的判断）</strong>：
+  当时只记录不改，计划 M4 换 embedding 相似度。</li>
+<li><strong>实际修复（M4）</strong>：
+  没有换 embedding，改成了<strong>强弱信号加权打分 + 全局阈值</strong>（详见 <code>docs/02-ADR-工具选择策略.md</code>）：
+  <code>python
+  # tools/hr_tools.py  get_candidate
+  keywords=["候选人", "状态", "查询"]      # 弱信号 +1，单独命中不够
+  strong=["候选人状态", "候选人进度", "候选人情况",
+          r"候选人.{0,6}?(状态|进展|进度|情况|资料|信息)"]   # 强信号 +3</code>
+  入选门槛设为 3 分：裸词「候选人」只得 1 分 → 不再被注入 → A05 转绿。</li>
+<li><strong>为什么没换成 embedding</strong>（这是个取舍，不是偷懒）：
+  1. 引入向量会带来 Key / 依赖 / 延迟，而这条选择模型太轻，不值当
+  2. 更关键的：<strong>一旦用模型做工具选择，A 类指标就不再是"与模型无关"的引擎指标</strong>，
+     评测就从"测引擎"变成了"测模型"，指标体系的定义就散了
+  3. 加权规则可解释——命中的是哪个词、多少分，全在上下文账本里，出问题十秒定位</li>
+<li><strong>教训</strong>：
+  1. 关键词加宽会<strong>同时</strong>降低漏选、抬高误选。这两个指标必须一起看，
+     只盯"有没有匹配上"，会把问题从一头推到另一头。
+     → 所以 M3 评测集必须同时包含两类用例：「该选却没选」和「不该选却选了」。
+  2. 这类问题只有把"注入了什么、为什么"显式打印才看得见——这是 M2 账本的第二次收益。</li>
+</ul>
+<hr />
+<h2>小坑 · Python 字符串里写中文引号导致 SyntaxError</h2>
+<ul>
+<li><strong>日期</strong>：2026-10-05</li>
+<li><strong>发现方式</strong>：自己发现（跑 <code>scripts/context_benchmark.py</code> 报错）</li>
+<li><strong>现象</strong>：
+  <code>File "scripts/context_benchmark.py", line 194
+    "- 历史分区与"本轮执行结果"共享额度，执行结果优先（它是当前决策的直接依据）。",
+  SyntaxError: invalid syntax. Perhaps you forgot a comma?</code></li>
+<li><strong>原因</strong>：
+  写 Markdown 报告内容时习惯性用了直引号 <code>"</code>，而外层的 Python 字符串也是 <code>"</code>，
+  字符串被提前截断。</li>
+<li><strong>修复</strong>：把内层引号去掉，改成 <code>历史分区与本轮执行结果共享额度</code>。</li>
+<li><strong>教训</strong>：
+  在 Python 源码里拼 Markdown 正文时，<strong>内层一律不要出现 ASCII 直引号</strong>；
+  需要引号就用中文书名号或全角引号「」。</li>
+</ul>
+<hr />
+<h2>小坑 · 评测用例自己写错参数名，导致误报失败</h2>
+<ul>
+<li><strong>日期</strong>：2026-10-05</li>
+<li><strong>发现方式</strong>：自己发现（首次跑 <code>scripts/run_evals.py</code>，C05 报错）</li>
+<li><strong>现象</strong>：
+  ```
+  ❌ C05 工具必填参数缺失时，契约校验必须拦住<ul>
+<li>参数齐全应通过｜validate 返回 ok=False，原因: 缺少必填参数: candidate
+  ```
+  名为「参数齐全应通过」的断言却失败了——看起来像是引擎的契约校验有 bug。</li>
+</ul>
+</li>
+<li><strong>定位过程</strong>：
+  1. 看报错信息：缺的是 <code>candidate</code>
+  2. 查 <code>tools/hr_tools.py</code> 里 <code>screen_resume</code> 的声明：<code>params={candidate, jd}</code>
+  3. 我在用例里凭印象写的是 <code>resume_text</code>——<strong>这个参数根本不存在</strong></li>
+<li><strong>原因</strong>：<strong>写测试用例时凭印象编参数名</strong>，没有回看工具的真实声明。
+  引擎没错，是<strong>用例错了</strong>。</li>
+<li><strong>修复</strong>：改成真实参数 <code>{"candidate": ..., "jd": ...}</code>，并补一条「未声明参数应被拒绝」的断言
+  （把这次踩的坑反过来变成一条正式用例）。</li>
+<li><strong>教训</strong>：
+  1. <strong>看到用例失败，第一反应不能是「产品有 bug」，要先确认是产品错了还是用例错了。</strong>
+     我这次差点去改一个根本没问题的引擎。
+  2. 断言的参数名必须来自工具声明，不能来自记忆。
+  3. 顺手收获：把「未声明参数也应被拒绝」补进用例，等于用教训换了一条新覆盖。</li>
+</ul>
+<hr />
+<h2>BUG-006 · 基准测试的基线调用了当前实现，度量会随代码一起漂移</h2>
+<ul>
+<li><strong>日期</strong>：2026-10-05</li>
+<li><strong>发现方式</strong>：自己发现（M4 改完工具选择后，重新审视 <code>scripts/context_benchmark.py</code> 时发现）</li>
+<li><strong>现象</strong>：
+  <code>context_benchmark.py</code> 里代表"旧做法"的那一栏是这么写的：
+  <code>python
+  def m1_measure(registry, user_input, history):
+      specs = registry.select_for_intent(user_input, top_k=5)   # ← 调的是当前实现</code>
+  它调用了<strong>当前代码的</strong> <code>select_for_intent</code>。
+  M4 一旦改优化这个函数，所谓"基线"也跟着变瘦了——
+  对比就变成了<strong>跟一个不断变化的影子比</strong>，降幅会被动缩水。</li>
+<li><strong>原因</strong>：
+  基线<strong>必须独立于被测实现</strong>。偷懒复用当前代码，短期省事，
+  长期会让度量失去意义——而且很难发现，因为它不报错，只是数字悄悄变小。</li>
+<li><strong>修复</strong>：
+  在脚本里独立复算旧逻辑，把旧关键词表与三条旧规则（计数打分 / 固定 top_k / 强制注入）
+  原样抄成常量 <code>LEGACY_KEYWORDS</code> + <code>legacy_select()</code>，不再碰当前代码：
+  <code>python
+  def legacy_select(registry, user_input, top_k=5):
+      ranked = sorted(registry.all(), key=lambda s: (-score(s), s.name))
+      picked = ranked[:top_k]
+      for name in LEGACY_FORCED_HIGH_RISK:      # 旧规则：高风险无条件追加
+          ...</code></li>
+<li><strong>修复后重测的结果</strong>：
+  平均降幅从 <strong>36% → 52.8%</strong>，注入工具数 <strong>6.4 → 1.2 个</strong>。
+  （36% 在它当时那个基线下是正确的；这次修掉的是"以后会失真"的隐患，
+  数字变大是因为 M4 确实又优化了一轮。）</li>
+<li><strong>教训（这条我给满分）</strong>：
+  1. <strong>度量 Kill 自己的最好方式，就是让基线依赖被测代码。</strong>
+     写优化类脚本时，基线要像"标本"一样被冻结，而不是让活着。
+  2. 这类 bug 不会报错、不会崩，只是数字悄悄失真——<strong>是最阴的一类</strong>。
+  3. 面试可讲："我给这个项目做基准测试时踩过一个坑——基线调用了当前实现，
+     等于跟自己的影子比。后来把旧规则���算出来冻结住，才发现真实收益比原先报的大不少。"</li>
+</ul>
+<hr />
+<h2>BUG-007 · 参数名 <code>type</code> 遮蔽内置 <code>type</code>，导致异常处理块二次崩溃（M4 接真模型暴露）</h2>
+<ul>
+<li><strong>日期</strong>：2026-10-05</li>
+<li><strong>发现方式</strong>：协助调试发现（AI 跑 live 评测时，24 条 × 3 轮里有 14 轮崩在 tracer 的 except 块）</li>
+<li><strong>现象</strong>：
+  live 评测里每遇到一次 DeepSeek 偶发 SSL EOF，就跟着抛：
+  <code>TypeError: 'str' object is not callable</code>
+  栈顶在 <code>harness/tracer.py</code> 的 <code>span()</code> 上下文管理器 <code>except</code> 块，整轮评测被判失败。
+  真正导致失败的网络错误被这个 <code>TypeError</code> <strong>盖住了</strong>，一眼看不出根因。</li>
+<li><strong>定位过程</strong>：
+  1. 看 <code>reports/debug_traceback.txt</code>，栈顶在 <code>tracer.py</code> 第 123 行 <code>self.end_span(sp, status="failed", error=f"{type(e).__name__}: {e}")</code>
+  2. 这行本意是取异常类型名（如 <code>URLError</code>），但 <code>type</code> 在这里指向的是<strong>字符串参数</strong>，不是内置 <code>type</code>
+  3. 往上查：<code>start_span(self, type: str, ...)</code> 和 <code>span(self, type: str, ...)</code> 把参数命名为 <code>type</code>，遮蔽了内置 <code>type</code>
+  4. 所以 <code>except</code> 里调 <code>type(e)</code> 实际是在调那个字符串 → 字符串不可调用 → 二次异常</li>
+<li><strong>原因</strong>：
+  方法参数名叫 <code>type</code>，遮蔽了内置 <code>type</code>。这错<strong>平时完全没事</strong>——
+  只有当「主逻辑先抛异常」时（这里就是 SSL EOF），<code>except</code> 块里的 <code>type(e)</code> 才会触发二次崩溃。
+  典型的「只在真网络 / 生产下才暴露」的 bug，Stub 永远触发不了。</li>
+<li><strong>修复</strong>：
+  <code>python
+  # harness/tracer.py
+  def start_span(self, span_type: str, name: str, ...) -&gt; Span:   # type → span_type
+  def span(self, span_type: str, name: str, ...) -&gt; Iterator[Span]:  # 同上
+  # except 块里的 type(e) 自动恢复指向内置 type</code></li>
+<li><strong>教训（这条很值钱）</strong>：
+  1. <strong>永远别用 <code>type</code> / <code>id</code> / <code>list</code> / <code>dir</code> 这种内置名当变量名</strong>，哪怕只是个方法参数。
+     IDE 不报错、单测不触发，运行时才炸。
+  2. <strong>异常处理的 except 块本身也可能抛异常</strong>。上下文管理器里 <code>except Exception: ...; raise</code> 的兜底，
+     绝不能自己再崩——否则会掩盖真正的根因（这里是 SSL EOF，被 TypeError 盖住了）。
+  3. 这条 bug 的触发条件是「先有另一个异常」，所以它是<strong>只在生产环境才暴露</strong>的一类 bug。
+     写引擎层代码时，span/日志这类"兜底路径"要当成产品代码一样测，不能假设它永远走不到。</li>
+</ul>
+<hr />
+<h2>BUG-008 · 对外 HTTP 调用没有重试，瞬断直接变成致命错误（M4 接真模型暴露）</h2>
+<ul>
+<li><strong>日期</strong>：2026-10-05</li>
+<li><strong>发现方式</strong>：协助调试发现（live 评测 14 轮因 SSL EOF 崩溃，与 BUG-007 同源）</li>
+<li><strong>现象</strong>：
+  <code>DeepSeekLLM.complete</code> 调用接口偶发 <code>ssl.SSLEOFError: UNEXPECTED_EOF_WHILE_READING</code>，
+  直接抛出<strong>未捕获</strong>异常，整轮评测失败。一次瞬断就把一条用例判死。</li>
+<li><strong>定位过程</strong>：
+  1. 看 traceback：<code>urllib.request.urlopen</code> 在读取响应时 SSL 连接被对端重置
+  2. 当时 <code>complete</code> 只有单次 <code>urlopen</code>，没有重试逻辑
+  3. 对照 C4 健壮性硬约束：任何对外 HTTP 调用必须有「超时 + 重试 + 降级」</li>
+<li><strong>原因</strong>：
+  对外网络调用只有一次尝试。瞬断、限流（429）、5xx、对端重启都是常态，
+  当成致命错误直接上抛，等于把"概率性抖动"放大成"确定性失败"。</li>
+<li><strong>修复</strong>：
+  <code>python
+  # harness/llm.py  DeepSeekLLM.complete
+  for attempt in range(3):
+      try:
+          with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+              body = json.loads(resp.read().decode("utf-8"))
+          break
+      except urllib.error.HTTPError as e:
+          if attempt &lt; 2 and e.code in (429, 500, 502, 503, 504):
+              time.sleep(0.5 * (2 ** attempt) + random.uniform(0, 0.3))  # 指数退避 + 抖动
+              continue
+          raise RuntimeError(f"DeepSeek 调用失败 {e.code}: {detail}") from e
+      except urllib.error.URLError as e:
+          if attempt &lt; 2:
+              time.sleep(0.5 * (2 ** attempt) + random.uniform(0, 0.3))
+              continue
+          raise RuntimeError(f"DeepSeek 网络错误: {e.reason}") from e</code>
+  只对<strong>可重试错误</strong>重试（429 / 5xx / 网络层 <code>URLError</code>）；4xx 是请求本身有误，重试没用，直接报错。</li>
+<li><strong>教训</strong>：
+  1. <strong>任何对外网络调用都不能只有一次尝试</strong>。瞬断、限流、对端重启是常态不是异常。
+  2. 重试要区分「可重试 / 不可重试」：4xx（请求错了）重试纯浪费；5xx / 429 / 网络层错误才值得重试。
+  3. 退避必须加<strong>抖动</strong>，否则一批请求同时重试会把对端打进"重试风暴"（惊群）。
+  4. 这条和 BUG-007 是同一轮 live 评测一起暴露的：Stub 永远走不到网络路径，
+     <strong>接真模型 = 把"只在生产才暴露"的一类缺陷提前到开发期发现</strong>。这正是 M4 接真模型的最大收益之一。</li>
+</ul>
+<hr />
+<h2>踩坑7 · Cloudflare 按 User-Agent 封禁 urllib，Dify 云端调用吃 403（M5 联调暴露）</h2>
+<ul>
+<li><strong>日期</strong>：2026-10-05</li>
+<li><strong>发现方式</strong>：自己发现（跑 <code>scripts/_dify_probe.py</code> / <code>run_dify_eval.py</code> 时收到 403 + <code>error code: 1010</code>）</li>
+<li><strong>现象</strong>：
+  用 <code>urllib.request</code> 直连 <code>https://api.dify.ai/v1/chat-messages</code>，返回 HTTP 403，响应头
+  <code>Server: cloudflare</code>、<code>cfOrigin;dur=0</code>，正文 <code>error code: 1010</code>。
+  <code>cfOrigin;dur=0</code> 的含义是<strong>请求根本没到达 Dify 源站</strong>，被 Cloudflare 边缘拦了。</li>
+<li><strong>定位过程</strong>：
+  1. 用 <code>curl -i</code> 复现同样的 403，确认不是 Python 代码问题，是网络层
+  2. 对比：浏览器能正常打开 dify.ai → 怀疑是 UA 指纹
+  3. 看 urllib 默认 UA 是 <code>Python-urllib/3.x</code>——典型的 bot 特征
+  4. 加 <code>User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) HRAH-Eval/1.0</code> 重试 →
+     响应头变 <code>cfOrigin;dur=141</code>、<code>X-Version: 1.17.1</code>，说明<strong>已到达源站</strong>（下一步才暴露 踩坑8 的 400）</li>
+<li><strong>原因</strong>：
+  api.dify.ai 前置 Cloudflare，对默认 Python UA 启用 bot 防护，直接 403。</li>
+<li><strong>修复</strong>：
+  <code>python
+  # evals/dify_adapter.py  DifyClient.__init__
+  self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) HRAH-Eval/1.0"
+  # chat() 的 headers 里带 "User-Agent": self.user_agent, "Accept": "text/event-stream"</code></li>
+<li><strong>教训</strong>：
+  1. <strong>直连第三方 API 时，UA 不是装饰</strong>——很多站（尤其套了 Cloudflare 的）会对默认
+     脚本 UA 做 bot 拦截。报错 403 先怀疑 UA，再怀疑 key。
+  2. <code>cfOrigin;dur=0</code> 是个好信号：它告诉你"没到源站"，问题在边缘/CDN，不在你的 key 或代码。
+  3. 面试可讲："我联调 Dify 云端时被 Cloudflare 按 UA 拦了 403，看 <code>cfOrigin;dur=0</code>
+     判断是边缘没放行，换浏览器 UA 就到了——这类排错比写功能更见功力。"</li>
+</ul>
+<hr />
+<h2>踩坑8 · Dify Agent 应用只支持 streaming，blocking 被 400 拒（M5 联调暴露）</h2>
+<ul>
+<li><strong>日期</strong>：2026-10-05</li>
+<li><strong>发现方式</strong>：自己发现（踩坑7 修好后，请求到达源站立刻返回 400）</li>
+<li><strong>现象</strong>：
+  修好 UA 后，Dify 返回 HTTP 400，正文：
+  <code>{"code": "streaming_not_supported", "message": "Agent App only supports streaming response mode", ...}</code></li>
+<li><strong>定位过程</strong>：
+  1. 踩坑7 之后请求已到源站（X-Version 正常），所以这是 Dify 的业务校验错误，不是网络
+  2. 看报错：<code>Agent App only supports streaming response mode</code>——明确说 Agent 类应用<strong>不支持 blocking</strong>
+  3. 把 <code>response_mode</code> 从 <code>"blocking"</code> 改成 <code>"streaming"</code>，并补 SSE 解析</li>
+<li><strong>原因</strong>：
+  Dify 的 <strong>Agent 类型应用</strong>（区别于普通 Chatbot）强制 streaming，blocking 模式不被接受。
+  早期适配器按 Chatbot 的 blocking 模式写，所以一改 UA 就暴露这个 400。</li>
+<li><strong>修复</strong>：
+  <code>python
+  # evals/dify_adapter.py  chat()
+  payload["response_mode"] = "streaming"
+  # 新增 _read_stream(resp)：逐行解析 SSE，从 message/agent_message 拼 answer，
+  # 从 agent_thought 抽 tool/tool_input/observation，遇 [DONE] 结束</code></li>
+<li><strong>教训</strong>：
+  1. <strong>Dify 不同应用类型的 API 约束不一样</strong>：Chatbot 支持 blocking/streaming，Agent 只支持 streaming。
+     接第三方 API 前先看官方文档的应用类型差异，别套用直觉。
+  2. streaming 反而是<strong>更优解</strong>：<code>agent_thought</code> 事件在流式里才带工具调用明细，
+     这反而让我们拿到了"Dify 调了哪个工具"的证据（见 ADR-003 论据二校正）。
+  3. 面试可讲："我把 Dify Agent 的 blocking 改 streaming，顺手发现流式响应里
+     <code>agent_thought</code> 暴露了工具调用——本来以为 Dify 完全黑盒，实测后校正了结论。"</li>
+</ul>
+<hr />
+<h2>已知问题（待修）</h2>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>问题</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ISSUE-001</td>
+<td><code>select_for_intent</code> 会注入 score=0 的无关工具，白白占用 token 预算</td>
+<td>✅ M2 已解决；M4 进一步收紧（改强弱加权 + 门槛 3）。用忠实基线复算后，平均降幅 <strong>52.8%</strong>、注入工具数 <strong>6.4 → 1.2 个</strong>（见 <code>reports/context_benchmark.md</code>）</td>
+</tr>
+<tr>
+<td>ISSUE-002</td>
+<td>Stub 的"有 observations 就 FINISH"策略过于粗暴，不支持多步任务</td>
+<td>✅ M4 已解决：接真模型后多步任务由 DeepSeek 处理，Stub 仅保留离线回归用途</td>
+</tr>
+<tr>
+<td>ISSUE-003</td>
+<td>Trace 只存在内存里，没有落盘，无法做跨运行的失败模式分析</td>
+<td>✅ M3 已解决：每次运行落盘到 <code>reports/traces/{case_id}_r{n}.json</code></td>
+</tr>
+<tr>
+<td>ISSUE-004</td>
+<td>意图筛选仍靠字面关键词，对间隔表达与同义表达鲁棒性差</td>
+<td>🔶 M4 部分解决：改为「间隔正则 + 强弱加权」，间隔表达已能覆盖。<strong>仍未解决的是语义层</strong>：否定句（「先别发邮件」）会被误判为肯定意图。真正的解法是 embedding / LLM 路由，推迟到 M5（与 Dify 对照组一起做），理由见 <code>docs/02-ADR</code></td>
+</tr>
+<tr>
+<td>ISSUE-005</td>
+<td>上下文压缩目前是"规则截断 + 单行摘要"，不是模型摘要，长会话下会丢细节</td>
+<td>⬜ 待 M4 评估是否换成 LLM 摘要</td>
+</tr>
+<tr>
+<td>ISSUE-006</td>
+<td>高风险工具（<code>schedule_interview</code>/<code>send_email</code>）<strong>无条件强制注入</strong>，5 个场景里有 4 个它们是多余的；除白占约 100 token 外，还可能诱导模型误调高风险动作（每次误调都要人工确认，等于打断用户）</td>
+<td>✅ <strong>M4 已解决</strong>：取消强制注入，改为按得分入选。验证=C 类 6/6 仍全绿（该拦的照样拦），A06 由红转绿</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>使用建议</h2>
+<ol>
+<li><strong>每修一个 bug 就立刻记一条</strong>，别攒着——细节会忘，忘了就写不出"定位过程"</li>
+<li><strong>"教训"一栏最重要</strong>，它是面试时的谈资</li>
+<li>记录时如实标注发现方式，讲的时候才不会心虚</li>
+</ol>
+</article>
+</body>
+</html>

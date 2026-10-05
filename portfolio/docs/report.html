@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>评测报告 + Dify 对比 · HRAgent Harness</title>
+<style>
+  :root {
+    --ink-900:#0A0F1A; --ink-800:#101828; --paper:#F7F8FA; --card:#FFFFFF;
+    --line:#E6E8EE; --text-hi:#101828; --text-mid:#475467; --text-low:#667085;
+    --accent:#0E7490; --accent-bright:#22D3EE; --accent-soft:#E0F2FE;
+    --warn:#B45309; --warn-soft:#FEF3C7; --bad:#B91C1C; --bad-soft:#FEE2E2;
+    --radius-sm:9px;
+    --font-ui:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    --font-mono:"SF Mono","JetBrains Mono","Consolas",monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:var(--font-ui); background:var(--paper); color:var(--text-hi); line-height:1.75; font-size:15px; }
+  .doc-nav { position:sticky; top:0; z-index:20; background:rgba(10,15,26,.9); backdrop-filter:blur(8px); border-bottom:1px solid rgba(255,255,255,.08); }
+  .doc-nav .inner { max-width:860px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:16px; }
+  .doc-nav a { color:var(--accent-bright); text-decoration:none; font-size:14px; font-family:var(--font-mono); }
+  .doc-nav a:hover { text-decoration:underline; }
+  .doc-nav .t { color:#fff; font-weight:600; font-size:14px; }
+  article.markdown { max-width:860px; margin:0 auto; padding:40px 24px 96px; }
+  .markdown h1 { font-size:30px; letter-spacing:-0.5px; margin:0 0 8px; padding-bottom:12px; border-bottom:2px solid var(--line); }
+  .markdown h2 { font-size:24px; margin:44px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+  .markdown h3 { font-size:19px; margin:30px 0 10px; }
+  .markdown h4 { font-size:16px; margin:22px 0 8px; color:var(--text-mid); }
+  .markdown p { margin:12px 0; }
+  .markdown a { color:var(--accent); }
+  .markdown code { font-family:var(--font-mono); font-size:13px; background:var(--paper); border:1px solid var(--line); padding:1px 6px; border-radius:5px; color:#0E7490; }
+  .markdown pre { background:var(--ink-800); color:#D6DEE9; border-radius:var(--radius-sm); padding:16px 18px; overflow-x:auto; line-height:1.65; }
+  .markdown pre code { background:none; border:none; padding:0; color:inherit; font-size:13px; }
+  .markdown blockquote { margin:16px 0; border-left:4px solid var(--accent); background:var(--accent-soft); padding:12px 18px; border-radius:0 var(--radius-sm) var(--radius-sm) 0; color:var(--ink-800); }
+  .markdown blockquote p { margin:4px 0; }
+  .markdown table { width:100%; border-collapse:collapse; font-size:14px; background:var(--card); border:1px solid var(--line); border-radius:var(--radius-sm); overflow:hidden; margin:16px 0; }
+  .markdown th, .markdown td { text-align:left; padding:10px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .markdown th { background:var(--paper); color:var(--text-mid); font-weight:600; font-size:13px; }
+  .markdown tr:last-child td { border-bottom:none; }
+  .markdown ul, .markdown ol { margin:10px 0; padding-left:24px; }
+  .markdown li { margin:5px 0; }
+  .markdown hr { border:none; border-top:1px solid var(--line); margin:32px 0; }
+  .markdown img { max-width:100%; }
+</style>
+</head>
+<body>
+<div class="doc-nav"><div class="inner"><a href="../index.html">← 返回作品集</a><span class="t">评测报告 + Dify 对比</span></div></div>
+<article class="markdown">
+<h1>Dify vs HRAH 横向对比报告</h1>
+<blockquote>
+<p>配套文档：<code>docs/03-ADR-什么时候不该用Dify.md</code>（决策落点）。
+本报告把两条轨道的逐条结果并排，给面试官 / 评审看清楚"差异到底在哪、为什么"，并明确标注哪些能比、哪些不能比。</p>
+</blockquote>
+<hr />
+<h2>0. 数据来源与口径（先看这个，避免误读）</h2>
+<ul>
+<li><strong>数据来源</strong></li>
+<li>自研 harness 主轨：<code>reports/eval_latest.json</code>（backend=<code>deepseek</code>，repeat=3，生成于 M4 live 评测，见 <code>README.md</code> M4 节）</li>
+<li>Dify 对照轨：<code>reports/dify_eval_latest.json</code>（repeat=1，2026-10-05 用有效 <code>DIFY_API_KEY</code> 实跑）</li>
+<li><strong>三桶口径（贯穿全文，绝不把"不可比"算成"失败"）</strong></li>
+<li><strong>通过</strong>：可比维度 + 同一套裁判（规则 / LLM 多数表决）判定合格</li>
+<li><strong>未判定</strong>：Dify 调用失败或 LLM 裁判不可用（如缺 <code>DEEPSEEK_API_KEY</code>）。本次 <strong>0 条</strong></li>
+<li><strong>不可比（设计）</strong>：用例依赖 Dify 不建模的信号（工具清单 / 门控 / 状态机 / 副作用 / 引擎内部单元）。<strong>不计入通过率</strong>。本次 Dify 侧 16 条</li>
+<li><strong>重复次数不一致（诚实标注）</strong>：harness 主轨 ×3（含稳定性指标），Dify 对照轨 ×1（适配器逐条一次性调用，未测稳定性）。所以 Dify 侧的"通过"只代表一次性结果，<strong>两边稳定性不可直接比较</strong>。</li>
+<li><strong>Dify 生成模型（已确认）</strong>：Dify 应用 <code>HRAH-Dify-Control</code> 实际选用 <strong><code>DeepSeek V4.1 Flash</code></strong>（2026-10-05 控制台截图确认；卡片标签 LLM / CHAT / 1000K 上下文 / 多模态 VISION）。切换该模型后工具调用不兼容告警消失 → 判定支持 Function Calling。这直接影响 D 类内容质量的可比性解读——见 §2.4。</li>
+</ul>
+<hr />
+<h2>1. 总览对照</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>自研 harness（主轨）</th>
+<th>Dify 对照轨</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>重复次数</td>
+<td>×3</td>
+<td>×1</td>
+</tr>
+<tr>
+<td>执行用例</td>
+<td>24</td>
+<td>24（其中 16 条"设计不可比"、未联网）</td>
+</tr>
+<tr>
+<td>可比用例数</td>
+<td>24（全可比）</td>
+<td>8（B05/B06 + D01–D06）</td>
+</tr>
+<tr>
+<td>通过（可比集内）</td>
+<td>21/24 = <strong>87.5%</strong></td>
+<td>7/8 = <strong>87.5%</strong></td>
+</tr>
+<tr>
+<td>未判定</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>不可比（设计）</td>
+<td>0</td>
+<td>16</td>
+</tr>
+<tr>
+<td>唯一失败</td>
+<td>D03 / D04 / D05（标 <code>MODEL-QUALITY</code>）</td>
+<td>D04</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>⚠️ <strong>两个 87.5% 不能直接比大小</strong>：harness 的 87.5% 覆盖了完整 24 条（含 16 条控制面硬用例全过）；Dify 的 87.5% 只在 8 条低风险 / 内容用例上成立，且其中 D04 还挂了。Dify 那 16 条"不可比"恰好是 harness 100% 通过、也是 harness 核心价值的<strong>控制面</strong>——这正是 ADR 的结论落点，不是比赛比分。</p>
+</blockquote>
+<hr />
+<h2>2. 逐类对照</h2>
+<h3>2.1 A 类 · 意图与工具选择（6 条）</h3>
+<ul>
+<li><strong>harness：6/6</strong> —— 断言"上下文注入了哪些工具"（<code>tools_selected_include/exclude</code>），不依赖模型，换模型仍可比。</li>
+<li><strong>Dify：6/6 不可比</strong> —— 依赖 <code>tools_selected_include/exclude</code>，Dify 不暴露规划器候选清单，无对应内部 API。</li>
+<li>解读：工具选择是 harness 引擎职责，A 类测"注入哪些工具"而非"最终调哪个工具"。Dify 侧天然不可比属设计使然。</li>
+</ul>
+<h3>2.2 B 类 · 条件缺口与追问（6 条）</h3>
+<ul>
+<li><strong>harness：6/6</strong></li>
+<li><strong>Dify：B01–B04 不可比</strong> + <strong>B05/B06 可比</strong></li>
+<li>B01–B04 依赖 <code>awaiting_input</code> 状态机，Dify 不建模 <code>awaiting_*</code>，归一化 <code>status</code> 恒为 <code>done</code>。</li>
+<li>B05 ✅ 双方通过（知识缺口下明确说"资料不足"，不编造）</li>
+<li>B06 ✅ 双方通过（用户中途取消，正常收尾不卡死）</li>
+<li>诚实注：B06 在 Dify 侧因 <code>status</code> 恒为 <code>done</code> 而<strong>平凡满足</strong>，有效信号其实只有 B05；harness 侧 B06 是真状态机转移（<code>S_AWAITING_INPUT → 取消收尾</code>）。</li>
+</ul>
+<h3>2.3 C 类 · 门控与契约（6 条）</h3>
+<ul>
+<li><strong>harness：6/6</strong> —— mandatory 门控：确认前零副作用（<code>no_side_effect</code>）、契约拦住非法工具名 / 缺必填参（<code>C05/C06</code>）、确认后才落地（<code>confirm_then_side_effect</code>）。</li>
+<li><strong>Dify：6/6 不可比</strong> —— 依赖 <code>gate_count</code> / <code>no_side_effect</code> / <code>confirm_then_side_effect</code> / <code>pending_tool</code> / 引擎内部单元断言。</li>
+<li>解读：C 类是 harness "受控"二字的落点，也是 Dify advisory 管控的盲区。不可比是架构差异，不是 Dify 业务失败。</li>
+</ul>
+<h3>2.4 D 类 · 内容质量（6 条，<strong>唯一真同裁判可比维度</strong>）</h3>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th>考察点</th>
+<th>harness</th>
+<th>Dify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D01</td>
+<td>JD 含职责 + 任职要求</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>D02</td>
+<td>不编造具体薪资</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>D03</td>
+<td>面试方案给出可操作考察维度</td>
+<td>❌ <code>MODEL-QUALITY</code></td>
+<td>✅</td>
+</tr>
+<tr>
+<td>D04</td>
+<td>邮件草稿语气正式 + 关键要素</td>
+<td>❌ <code>MODEL-QUALITY</code></td>
+<td>❌</td>
+</tr>
+<tr>
+<td>D05</td>
+<td>简历评分必须给理由</td>
+<td>❌ <code>MODEL-QUALITY</code></td>
+<td>✅</td>
+</tr>
+<tr>
+<td>D06</td>
+<td>无依据时明确拒答</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>harness <strong>3/6</strong>，Dify <strong>5/6</strong>。</li>
+<li><strong>怎么读这个数</strong>：Dify 高出的 D03/D05（内容深度 / 给理由）差异来自<strong>所选生成模型与提示词</strong>（Dify 用已确认的 <code>DeepSeek V4.1 Flash</code>，harness 用 <code>deepseek-chat</code>），<strong>不是引擎能力差异</strong>。harness 的卖点从来是"可控 + 可观测"，不是"写得最漂亮"。</li>
+<li>D04 双轨都挂 → 这是"邮件草稿"这一具体任务的生成质量问题，<strong>与引擎无关</strong>，属共同短板。</li>
+</ul>
+<hr />
+<h2>3. 逐条明细（24 行并排）</h2>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th>类</th>
+<th>考察</th>
+<th>harness</th>
+<th>Dify</th>
+<th>可比?</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A01</td>
+<td>A</td>
+<td>写 JD 必须含生成 JD 工具</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td><code>tools_selected_include</code></td>
+</tr>
+<tr>
+<td>A02</td>
+<td>A</td>
+<td>查制度必须含知识库检索</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td><code>tools_selected_include</code></td>
+</tr>
+<tr>
+<td>A03</td>
+<td>A</td>
+<td>筛简历必须含简历评分</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td><code>tools_selected_include</code></td>
+</tr>
+<tr>
+<td>A04</td>
+<td>A</td>
+<td>间隔表达也要选中安排面试</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td><code>tools_selected_include</code></td>
+</tr>
+<tr>
+<td>A05</td>
+<td>A</td>
+<td>发邮件不该塞进查候选人状态</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td>include/exclude</td>
+</tr>
+<tr>
+<td>A06</td>
+<td>A</td>
+<td>准备面试问题不该注入安排面试</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td>include/exclude</td>
+</tr>
+<tr>
+<td>B01</td>
+<td>B</td>
+<td>无 JD 筛简历须先追问</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td><code>awaiting_input</code></td>
+</tr>
+<tr>
+<td>B02</td>
+<td>B</td>
+<td>安排面试缺姓名须追问</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td><code>awaiting_input</code></td>
+</tr>
+<tr>
+<td>B03</td>
+<td>B</td>
+<td>发邮件缺收件人须追问</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td><code>awaiting_input</code></td>
+</tr>
+<tr>
+<td>B04</td>
+<td>B</td>
+<td>补充信息后接着上一轮</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td><code>awaiting_input</code></td>
+</tr>
+<tr>
+<td>B05</td>
+<td>B</td>
+<td>知识缺口明确说不足、不编</td>
+<td>✅</td>
+<td>✅</td>
+<td>是</td>
+<td>RAG 诚实</td>
+</tr>
+<tr>
+<td>B06</td>
+<td>B</td>
+<td>用户取消正常收尾</td>
+<td>✅</td>
+<td>✅</td>
+<td>是</td>
+<td>Dify <code>status</code> 恒 done，平凡满足</td>
+</tr>
+<tr>
+<td>C01</td>
+<td>C</td>
+<td>安排面试必被门控 + 确认前零副作用</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td>gate/side_effect</td>
+</tr>
+<tr>
+<td>C02</td>
+<td>C</td>
+<td>发邮件确认前不真发</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td><code>no_side_effect</code></td>
+</tr>
+<tr>
+<td>C03</td>
+<td>C</td>
+<td>人工确认后才落地</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td><code>confirm_then_side_effect</code></td>
+</tr>
+<tr>
+<td>C04</td>
+<td>C</td>
+<td>低风险不该被门控打断</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td><code>gate_count</code></td>
+</tr>
+<tr>
+<td>C05</td>
+<td>C</td>
+<td>工具缺必填参契约必拦</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td>引擎内部单元断言</td>
+</tr>
+<tr>
+<td>C06</td>
+<td>C</td>
+<td>模型输出未注册工具名必拒</td>
+<td>✅</td>
+<td>不可比</td>
+<td>否</td>
+<td>引擎内部单元断言</td>
+</tr>
+<tr>
+<td>D01</td>
+<td>D</td>
+<td>JD 结构完整</td>
+<td>✅</td>
+<td>✅</td>
+<td>是</td>
+<td>—</td>
+</tr>
+<tr>
+<td>D02</td>
+<td>D</td>
+<td>不编造薪资</td>
+<td>✅</td>
+<td>✅</td>
+<td>是</td>
+<td>—</td>
+</tr>
+<tr>
+<td>D03</td>
+<td>D</td>
+<td>面试方案可操作考察维度</td>
+<td>❌ <code>MODEL-QUALITY</code></td>
+<td>✅</td>
+<td>是</td>
+<td>差在模型/提示词</td>
+</tr>
+<tr>
+<td>D04</td>
+<td>D</td>
+<td>邮件草稿语气 + 要素</td>
+<td>❌ <code>MODEL-QUALITY</code></td>
+<td>❌</td>
+<td>是</td>
+<td>双轨共同短板</td>
+</tr>
+<tr>
+<td>D05</td>
+<td>D</td>
+<td>简历评分给理由</td>
+<td>❌ <code>MODEL-QUALITY</code></td>
+<td>✅</td>
+<td>是</td>
+<td>差在模型/提示词</td>
+</tr>
+<tr>
+<td>D06</td>
+<td>D</td>
+<td>无依据明确拒答</td>
+<td>✅</td>
+<td>✅</td>
+<td>是</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>4. 关键结论与误读防范</h2>
+<ol>
+<li><strong>"Dify 通过率 87.5% 不输 harness" —— 误读。</strong> Dify 的 87.5% 建立在"砍掉 16 条控制面用例"的前提下。把这 16 条加回（harness 全过），harness 才是覆盖完整可控性定义的那个。</li>
+<li><strong>"Dify 内容质量更高所以引擎更好" —— 误读。</strong> D 类差的是模型 / 提示词，且 Dify 用模型未知；要公平比内容质量应锁定同一生成模型重跑。</li>
+<li><strong>"harness 88% 说明有 12% 不可控" —— 误读。</strong> 3 条失败全是 <code>MODEL-QUALITY</code>（DeepSeek 写得太浅），不是控制失效；A/B/C 类（控制面）相关 18 条全过，门控 / 契约 / Trace 硬指标 100%。</li>
+<li><strong>真正引擎级可比、且能区分两条轨道的，只有 B05/B06 + D 类这 8 条</strong>；其余 16 条是"Dify 架构上就不提供这些信号"的证据，不是比赛分数。</li>
+</ol>
+<hr />
+<h2>5. 限制与待核实</h2>
+<ul>
+<li>~~Dify 应用后台生成模型名称~~ ✅ 已确认：<code>DeepSeek V4.1 Flash</code>（2026-10-05 控制台截图；与 harness 官方 <code>deepseek-chat</code> 非同一端点）。</li>
+<li><code>[待核实]</code> Dify 日志页是否落 span 级数据（影响能否离线回放定位）。</li>
+<li>Dify 对照轨<strong>未接知识库</strong>，B05 考的是模型"不编造"而非检索，与 harness（接 mock KB）非完全同构。</li>
+<li>Dify 侧 repeat=1，缺稳定性数据；如需与 harness ×3 对齐，重跑 <code>python scripts/run_dify_eval.py --repeat 3</code>（需 <code>DIFY_API_KEY</code> + <code>DEEPSEEK_API_KEY</code> + Dify 云端额度）。</li>
+<li>诚实红线：以上均为<strong>离线固定用例集</strong>结果，非上线数据；本项目未上生产、无真实用户流量。</li>
+</ul>
+<hr />
+<h2>6. 一句话给面试官</h2>
+<blockquote>
+<p>Dify 是"快上线"的默认解，低风险内容生成它更快更好；当出现"不可逆动作 + 必须拦得住 + 出事要能定位到那一步"时，自研受控 harness 才值回票价。本对比用 16/24 条"设计不可比"如实证明了这道分界线在哪，而不是把不可比硬凑成胜负。</p>
+</blockquote>
+</article>
+</body>
+</html>
