@@ -189,10 +189,7 @@
   .deliver .desc { font-weight: 400; color: #9AA3B2; font-size: 13px; }
   .deliver .arrow { color: var(--accent-bright); font-family: var(--font-mono); }
 
-  /* ---------- 关于我 / 时间线 / 技术栈 ---------- */
-  .about-lead { font-size: 18px; color: var(--text-hi); max-width: 720px; line-height: 1.75; }
-  .about-lead strong { color: var(--accent); }
-
+  /* ---------- 时间线 / 技术栈 ---------- */
   .timeline { margin: 8px 0 0; }
   .tl-item { display: flex; gap: 16px; padding-bottom: 26px; position: relative; }
   .tl-item::before { content: ""; position: absolute; left: 5px; top: 22px; bottom: -6px; width: 2px; background: var(--line-strong); }
@@ -220,10 +217,9 @@
     <a class="link" href="#eval"><span class="idx">05</span>评测</a>
     <a class="link" href="#dify"><span class="idx">06</span>Dify 对照</a>
     <a class="link" href="#debug"><span class="idx">07</span>踩坑</a>
-    <a class="link" href="#about"><span class="idx">08</span>关于我</a>
-    <a class="link" href="#timeline"><span class="idx">09</span>时间线</a>
-    <a class="link" href="#stack"><span class="idx">10</span>技术栈</a>
-    <a class="link" href="#deliver"><span class="idx">11</span>交付物</a>
+    <a class="link" href="#timeline"><span class="idx">08</span>时间线</a>
+    <a class="link" href="#stack"><span class="idx">09</span>技术栈</a>
+    <a class="link" href="#deliver"><span class="idx">10</span>交付物</a>
   </div>
 </nav>
 
@@ -480,31 +476,9 @@ if step.action in (ACTION_CALL_TOOL, ACTION_REQUEST_CONFIRM):
   </div>
 </section>
 
-<section id="about">
-  <div class="wrap">
-    <div class="sec-head"><span class="sec-idx">08</span><h2>关于我</h2></div>
-    <p class="section-note">面试官会先问"你是个什么样的 PM"——这里直接给答案。</p>
-    <p class="about-lead">AI / Agent 方向的产品经理，正在补齐「能把 Agent 真正<strong>管住</strong>、并且<strong>讲清楚为什么</strong>」的工程底子。做这个项目不是交作业，而是给自己一个<strong>能跑、能测、能对着面试官讲证据</strong>的答案。</p>
-    <div class="grid cols-3" style="margin-top:24px">
-      <div class="card">
-        <h3>关注「能不能真落地」</h3>
-        <p style="margin:0;color:var(--text-mid)">不满足于「调 API 拼 demo」，在意可靠性、可控性、成本这些落地时才显形的硬问题。</p>
-      </div>
-      <div class="card">
-        <h3>用代码验证判断</h3>
-        <p style="margin:0;color:var(--text-mid)">选型、取舍不靠感觉：自研 harness 还是 Dify，跑同一套用例、用数据说话。</p>
-      </div>
-      <div class="card">
-        <h3>能讲清「为什么」</h3>
-        <p style="margin:0;color:var(--text-mid)">每篇 ADR 都写了「被否决的方案」和「什么情况下推翻」，面试被追问时站得住。</p>
-      </div>
-    </div>
-  </div>
-</section>
-
 <section id="timeline">
   <div class="wrap">
-    <div class="sec-head"><span class="sec-idx">09</span><h2>项目时间线</h2></div>
+    <div class="sec-head"><span class="sec-idx">08</span><h2>项目时间线</h2></div>
     <p class="section-note">六步走过来，每一步都有对应的代码 / 文档 / 提交记录可查。</p>
     <div class="timeline">
       <div class="tl-item"><div class="dot"></div><div>
@@ -543,7 +517,7 @@ if step.action in (ACTION_CALL_TOOL, ACTION_REQUEST_CONFIRM):
 
 <section id="stack">
   <div class="wrap">
-    <div class="sec-head"><span class="sec-idx">10</span><h2>技术栈</h2></div>
+    <div class="sec-head"><span class="sec-idx">09</span><h2>技术栈</h2></div>
     <p class="section-note">刻意保持克制：核心引擎零依赖，够用就好，不为了炫技堆技术。</p>
     <div class="grid cols-2">
       <div class="card">
@@ -602,7 +576,7 @@ if step.action in (ACTION_CALL_TOOL, ACTION_REQUEST_CONFIRM):
 
 <footer id="deliver">
   <div class="wrap">
-    <div class="sec-head"><span class="sec-idx" style="color:var(--accent-bright)">11</span><h2 style="color:#fff">交付物四件套</h2></div>
+    <div class="sec-head"><span class="sec-idx" style="color:var(--accent-bright)">10</span><h2 style="color:#fff">交付物四件套</h2></div>
     <p style="color:#9AA3B2;margin:0 0 20px">都在同一个 git 仓库里，提交历史即"一步步做出来"的证据链。</p>
     <div class="deliver">
       <a href="docs/prd-adr.html"><span>PRD + ADR 文档<span class="desc" style="display:block">00-PRD 与 01/02/03 三篇 ADR，记录每个关键取舍与推翻条件</span></span><span class="arrow">→</span></a>
