@@ -72,6 +72,7 @@
 <li><a href="#这不是什么">这不是什么</a></li>
 <li><a href="#当前进度">当前进度</a></li>
 <li><a href="#快速开始">快速开始</a></li>
+<li><a href="#部署到-github-pages-作品集-demo-的独立网址">部署到 GitHub Pages（作品集 + Demo 的独立网址）</a></li>
 <li><a href="#目录结构">目录结构</a></li>
 <li><a href="#三个核心设计">三个核心设计</a><ul>
 <li><a href="#1-受控-动作空间固定">1. 受控：动作空间固定</a></li>
@@ -140,8 +141,8 @@
 </tr>
 <tr>
 <td>M6</td>
-<td>作品集网站（静态单文件 + 交付物转 HTML + Trace 观测看板）</td>
-<td>✅ 完成（已发布 https://hrah-portfolio.app.workbuddy.host/）</td>
+<td>作品集网站（静态单文件 + 交付物转 HTML + Trace 观测看板 + 可交互 Demo）</td>
+<td>✅ 完成（纯静态 <code>portfolio/</code>，本地双击可开；部署到 GitHub Pages 即获得独立域名，见下文「部署到 GitHub Pages」）</td>
 </tr>
 </tbody>
 </table>
@@ -186,6 +187,31 @@ python scripts/run_evals.py --live
 python scripts/build_demo_page.py --live   # DeepSeek 真模型，数据更真实
 # 产出 portfolio/demo.html，双击即开，5 个场景逐步回放 Trace
 </code></pre>
+<h2 id="部署到-github-pages-作品集-demo-的独立网址">部署到 GitHub Pages（作品集 + Demo 的独立网址）</h2>
+<p>作品集是纯静态（<code>portfolio/</code> 内 <code>index.html</code> + <code>demo.html</code> + <code>docs/*.html</code>，相对链接、零后端），可直接托管到 GitHub Pages，得到不含任何第三方平台名的网址。</p>
+<ol>
+<li><strong>推代码</strong>：建一个 GitHub 空仓库（不要勾 README/gitignore），然后：</li>
+</ol>
+<p><code>bash
+   git remote add origin https://github.com/&lt;你的用户名&gt;/HRAgent-Harness.git
+   git push -u origin master</code></p>
+<ol start="2">
+<li>
+<p><strong>开 Pages</strong>：仓库页 → Settings → Pages → Source 选 <strong>Deploy from a branch</strong> → 分支 <code>master</code>、文件夹填 <strong><code>/portfolio</code></strong> → 保存。</p>
+</li>
+<li>
+<p>等 1~2 分钟，访问：</p>
+</li>
+</ol>
+<p><code>https://&lt;你的用户名&gt;.github.io/HRAgent-Harness/</code></p>
+<ul>
+<li>首页：<code>…/HRAgent-Harness/</code>（即 <code>index.html</code>）</li>
+<li>可交互 Demo：<code>…/HRAgent-Harness/demo.html</code></li>
+<li>交付物文档：<code>…/HRAgent-Harness/docs/*.html</code></li>
+</ul>
+<blockquote>
+<p>说明：仓库里已放 <code>portfolio/.nojekyll</code>，告诉 GitHub Pages 原样服务静态文件、不跑 Jekyll。若想用更短的顶级域名 <code>https://&lt;用户名&gt;.github.io/</code>，把仓库改名为 <code>&lt;你的用户名&gt;.github.io</code> 并把 Pages 文件夹设为仓库根 <code>/</code>（并把 <code>portfolio/</code> 内容移到根）即可。</p>
+</blockquote>
 <h2 id="目录结构">目录结构</h2>
 <pre><code>HRAgent-Harness/
 ├── harness/              # 引擎（本项目本体）

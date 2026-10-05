@@ -20,7 +20,7 @@
 | M3 | 评测体系（24 条用例 + 双裁判 + baseline 回归） | ✅ 完成 |
 | M4 | 工具选择策略重构 + 接 DeepSeek 真模型 | ✅ 完成（live 评测 24 条通过；暴露并修复 BUG-007 / BUG-008） |
 | M5 | Dify 对照轨道 + 对比 ADR | ✅ 完成。ADR-003 已 **Accepted**：定性结论（mandatory vs advisory / durable span 树 vs 流式事件 / 自研代码 vs OpenAPI / 可回归）基于代码对比 + Dify 云端实测；定量 head-to-head 已跑通 24 条 ×1（可比维度 B 2/2 + D 5/6；A/C 共 16 条设计不可比不计入通过率）。联调踩坑7（Cloudflare 按 UA 封 403）/踩坑8（Agent 只支持 streaming，blocking 被 400 拒）已修并记录于 `docs/99-问题与解决记录.md`；Dify 侧已建 `HRAH-Dify-Control` 应用 + `send_email` 工具 + 软确认实测 |
-| M6 | 作品集网站（静态单文件 + 交付物转 HTML + Trace 观测看板） | ✅ 完成（已发布 https://hrah-portfolio.app.workbuddy.host/） |
+| M6 | 作品集网站（静态单文件 + 交付物转 HTML + Trace 观测看板 + 可交互 Demo） | ✅ 完成（纯静态 `portfolio/`，本地双击可开；部署到 GitHub Pages 即获得独立域名，见下文「部署到 GitHub Pages」） |
 
 ## 快速开始
 
@@ -68,6 +68,31 @@ python scripts/build_demo_page.py          # Stub，不花钱、离线可复现
 python scripts/build_demo_page.py --live   # DeepSeek 真模型，数据更真实
 # 产出 portfolio/demo.html，双击即开，5 个场景逐步回放 Trace
 ```
+
+## 部署到 GitHub Pages（作品集 + Demo 的独立网址）
+
+作品集是纯静态（`portfolio/` 内 `index.html` + `demo.html` + `docs/*.html`，相对链接、零后端），可直接托管到 GitHub Pages，得到不含任何第三方平台名的网址。
+
+1. **推代码**：建一个 GitHub 空仓库（不要勾 README/gitignore），然后：
+
+   ```bash
+   git remote add origin https://github.com/<你的用户名>/HRAgent-Harness.git
+   git push -u origin master
+   ```
+
+2. **开 Pages**：仓库页 → Settings → Pages → Source 选 **Deploy from a branch** → 分支 `master`、文件夹填 **`/portfolio`** → 保存。
+
+3. 等 1~2 分钟，访问：
+
+   ```
+   https://<你的用户名>.github.io/HRAgent-Harness/
+   ```
+
+   - 首页：`…/HRAgent-Harness/`（即 `index.html`）
+   - 可交互 Demo：`…/HRAgent-Harness/demo.html`
+   - 交付物文档：`…/HRAgent-Harness/docs/*.html`
+
+> 说明：仓库里已放 `portfolio/.nojekyll`，告诉 GitHub Pages 原样服务静态文件、不跑 Jekyll。若想用更短的顶级域名 `https://<用户名>.github.io/`，把仓库改名为 `<你的用户名>.github.io` 并把 Pages 文件夹设为仓库根 `/`（并把 `portfolio/` 内容移到根）即可。
 
 ## 目录结构
 
