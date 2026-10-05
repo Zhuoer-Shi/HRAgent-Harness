@@ -61,7 +61,7 @@ python scripts/run_evals.py --live
 2. **缺信息会追问，不瞎猜** —— 没有 JD 就要筛简历
 3. **高风险动作必被拦下** —— 安排面试 / 发邮件只出草稿，确认后才执行
 
-生成浏览器里可点击的交互式 Demo（面试官能直接体验）：
+生成浏览器里可点击的交互式 Demo（可直接体验）：
 
 ```bash
 python scripts/build_demo_page.py          # Stub，不花钱、离线可复现
