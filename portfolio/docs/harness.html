@@ -17,15 +17,29 @@
   * { box-sizing: border-box; }
   body { margin:0; font-family:var(--font-ui); background:var(--paper); color:var(--text-hi); line-height:1.75; font-size:15px; }
   .doc-nav { position:sticky; top:0; z-index:20; background:rgba(10,15,26,.9); backdrop-filter:blur(8px); border-bottom:1px solid rgba(255,255,255,.08); }
-  .doc-nav .inner { max-width:860px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:16px; }
+  .doc-nav .inner { max-width:1100px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:16px; }
   .doc-nav a { color:var(--accent-bright); text-decoration:none; font-size:14px; font-family:var(--font-mono); }
   .doc-nav a:hover { text-decoration:underline; }
   .doc-nav .t { color:#fff; font-weight:600; font-size:14px; }
-  article.markdown { max-width:860px; margin:0 auto; padding:40px 24px 96px; }
+
+  .doc-layout { max-width:1100px; margin:0 auto; display:flex; gap:36px; align-items:flex-start; padding:0 24px 96px; }
+
+  .toc-side { position:sticky; top:76px; flex:0 0 236px; max-height:calc(100vh - 100px); overflow-y:auto; padding:28px 0 4px; }
+  .toc-side summary { list-style:none; cursor:pointer; font-family:var(--font-mono); font-size:12px; font-weight:700; color:var(--text-low); letter-spacing:.6px; text-transform:uppercase; user-select:none; margin-bottom:10px; }
+  .toc-side summary::-webkit-details-marker { display:none; }
+  .toc ul { list-style:none; margin:0; padding:0; }
+  .toc ul ul { margin-left:13px; padding-left:11px; border-left:1px solid var(--line); }
+  .toc li { margin:2px 0; }
+  .toc a { color:var(--text-mid); font-size:13px; line-height:1.55; text-decoration:none; display:block; padding:2px 0; }
+  .toc a:hover { color:var(--accent); }
+  .toc ul ul a { color:var(--text-low); font-size:12.5px; }
+
+  article.markdown { flex:1 1 auto; min-width:0; padding:40px 0 0; }
   .markdown h1 { font-size:30px; letter-spacing:-0.5px; margin:0 0 8px; padding-bottom:12px; border-bottom:2px solid var(--line); }
   .markdown h2 { font-size:24px; margin:44px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line); }
   .markdown h3 { font-size:19px; margin:30px 0 10px; }
   .markdown h4 { font-size:16px; margin:22px 0 8px; color:var(--text-mid); }
+  .markdown h1, .markdown h2, .markdown h3, .markdown h4 { scroll-margin-top: 76px; }
   .markdown p { margin:12px 0; }
   .markdown a { color:var(--accent); }
   .markdown code { font-family:var(--font-mono); font-size:13px; background:var(--paper); border:1px solid var(--line); padding:1px 6px; border-radius:5px; color:#0E7490; }
@@ -41,23 +55,50 @@
   .markdown li { margin:5px 0; }
   .markdown hr { border:none; border-top:1px solid var(--line); margin:32px 0; }
   .markdown img { max-width:100%; }
+
+  @media (max-width: 900px) {
+    .doc-layout { flex-direction:column; gap:8px; }
+    .toc-side { position:static; flex:0 0 auto; width:100%; max-height:none; padding:20px 0 0; border-bottom:1px solid var(--line); }
+    .toc ul ul { display:none; }
+    article.markdown { padding:24px 0 0; }
+  }
 </style>
 </head>
 <body>
 <div class="doc-nav"><div class="inner"><a href="../index.html">← 返回作品集</a><span class="t">可运行 harness 代码</span></div></div>
+<div class="doc-layout">
+<aside class="toc-side"><details class="toc" open><summary>目录</summary>
+<ul>
+<li><a href="#这不是什么">这不是什么</a></li>
+<li><a href="#当前进度">当前进度</a></li>
+<li><a href="#快速开始">快速开始</a></li>
+<li><a href="#目录结构">目录结构</a></li>
+<li><a href="#三个核心设计">三个核心设计</a><ul>
+<li><a href="#1-受控-动作空间固定">1. 受控：动作空间固定</a></li>
+<li><a href="#2-门控在框架层-不靠模型自觉">2. 门控在框架层，不靠模型自觉</a></li>
+<li><a href="#3-一切可回放">3. 一切可回放</a></li>
+<li><a href="#4-上下文是一笔有额度的开支-m2">4. 上下文是一笔有额度的开支（M2）</a></li>
+<li><a href="#5-评测-能被打分-才算真的可控-m3">5. 评测：能被打分，才算真的可控（M3）</a></li>
+<li><a href="#接真模型跑一遍才是真的-m4-live-评测">接真模型跑一遍才是真的（M4 live 评测）</a></li>
+<li><a href="#一次完整的优化闭环-m3-m4">一次完整的优化闭环（M3 → M4）</a></li>
+</ul>
+</li>
+<li><a href="#项目性质">项目性质</a></li>
+</ul>
+</details></aside>
 <article class="markdown">
-<h1>HRAgent Harness (HRAH)</h1>
+<h1 id="hragent-harness-hrah">HRAgent Harness (HRAH)</h1>
 <p>一个可观测、可评测的<strong>受控 Agent 运行时</strong>，用 HR 招聘场景验证。</p>
 <blockquote>
 <p>一句话：自己写一个 Agent 引擎 + 一套给它打分的评测体系，让 AI 干活"有边界、看得见、测得准"。</p>
 </blockquote>
-<h2>这不是什么</h2>
+<h2 id="这不是什么">这不是什么</h2>
 <ul>
 <li>不是一个 HR 系统（没有登录、权限、多租户）</li>
 <li>不接真实数据库 / 邮件服务 / 向量库</li>
 <li>当前进度：M4 已完成（工具选择策略重构 + 接 DeepSeek 真模型跑通 24 条评测，live 评测中发现并修复 2 个真实缺陷，见 <code>docs/99-问题与解决记录.md</code> 的 BUG-007 / BUG-008）</li>
 </ul>
-<h2>当前进度</h2>
+<h2 id="当前进度">当前进度</h2>
 <table>
 <thead>
 <tr>
@@ -104,7 +145,7 @@
 </tr>
 </tbody>
 </table>
-<h2>快速开始</h2>
+<h2 id="快速开始">快速开始</h2>
 <pre><code class="language-bash"># 零依赖、不联网、不花钱
 python demo.py
 
@@ -138,7 +179,7 @@ python scripts/run_evals.py --live
 <li><strong>缺信息会追问，不瞎猜</strong> —— 没有 JD 就要筛简历</li>
 <li><strong>高风险动作必被拦下</strong> —— 安排面试 / 发邮件只出草稿，确认后才执行</li>
 </ol>
-<h2>目录结构</h2>
+<h2 id="目录结构">目录结构</h2>
 <pre><code>HRAgent-Harness/
 ├── harness/              # 引擎（本项目本体）
 │   ├── tool_registry.py  # 工具注册表：参数契约 + 风险等级 + 强弱信号打分（M4）
@@ -172,14 +213,14 @@ python scripts/run_evals.py --live
 ├── docs/                 # PRD / ADR / 问题与解决记录
 └── demo.py
 </code></pre>
-<h2>三个核心设计</h2>
-<h3>1. 受控：动作空间固定</h3>
+<h2 id="三个核心设计">三个核心设计</h2>
+<h3 id="1-受控-动作空间固定">1. 受控：动作空间固定</h3>
 <p>规划器只能输出 4 种动作：<code>CALL_TOOL</code> / <code>ASK_USER</code> / <code>REQUEST_CONFIRM</code> / <code>FINISH</code>。
 任何不在动作空间内的输出都被拒绝，可携带错误信息重试一次，仍失败则记为规划失败。</p>
-<h3>2. 门控在框架层，不靠模型自觉</h3>
+<h3 id="2-门控在框架层-不靠模型自觉">2. 门控在框架层，不靠模型自觉</h3>
 <p>即使模型直接输出"调用 send_email"，runner 也会因为该工具风险等级为 <code>high</code> 把它拦下，
 转成待确认状态并先出草稿。<strong>模型想违规也违规不了</strong> —— 这一点可以用评测验证。</p>
-<h3>3. 一切可回放</h3>
+<h3 id="3-一切可回放">3. 一切可回放</h3>
 <p>每次运行生成一个 <code>trace_id</code>，span 类型为 <code>run / plan / llm / tool_call / gate / respond</code>，
 记录输入、输出、耗时、token、状态，可输出人类可读时间线：</p>
 <pre><code>Trace tr-xxx  （共 5 个 span）
@@ -188,7 +229,7 @@ python scripts/run_evals.py --live
 [+] plan       plan[0] CALL_TOOL            0.0ms
 [+] gate       gate:schedule_interview      0.1ms
 </code></pre>
-<h3>4. 上下文是一笔有额度的开支（M2）</h3>
+<h3 id="4-上下文是一笔有额度的开支-m2">4. 上下文是一笔有额度的开支（M2）</h3>
 <p>每次请求按 5 个分区配额度：system 15% / tools 20% / retrieval 25% / history 30% / reserve 10%。
 超预算时按固定顺序裁剪；<strong>已被选中（确实相关）的高风险工具不会被裁剪</strong>——安全优先于预算。
 每次运行都产出账本，其中含「为什么选中它」的命中说明：</p>
@@ -207,7 +248,7 @@ python scripts/run_evals.py --live
 <p>基线是在 benchmark 脚本里<strong>冻结复算</strong>的，不调用当前实现。
 让基线依赖被测代码，度量就会跟着代码一起漂移——这个坑见调试日志 <code>BUG-006</code>。</p>
 </blockquote>
-<h3>5. 评测：能被打分，才算真的可控（M3）</h3>
+<h3 id="5-评测-能被打分-才算真的可控-m3">5. 评测：能被打分，才算真的可控（M3）</h3>
 <p>24 条用例，四类各 6 条：A 意图与工具选择 / B 条件缺口 / C 门控与契约 / D 内容质量。</p>
 <p>三个刻意的设计决定：</p>
 <ol>
@@ -268,7 +309,7 @@ python scripts/run_evals.py --live
 </tr>
 </tbody>
 </table>
-<h3>接真模型跑一遍才是真的（M4 live 评测）</h3>
+<h3 id="接真模型跑一遍才是真的-m4-live-评测">接真模型跑一遍才是真的（M4 live 评测）</h3>
 <p>Stub 只验证了"引擎对不对"，但<strong>引擎对不对 ≠ 接上真模型后整条链路对不对</strong>。
 M4 用 DeepSeek（<code>deepseek-chat</code>，零第三方依赖直连）把 24 条用例全跑了一遍（每条重复 3 轮）：</p>
 <table>
@@ -333,7 +374,7 @@ M4 用 DeepSeek（<code>deepseek-chat</code>，零第三方依赖直连）把 24
 <blockquote>
 <p>诚实口径：88% 是<strong>离线固定用例集</strong>通过率，不是上线数据；本项目未上生产、无真实用户流量。</p>
 </blockquote>
-<h3>一次完整的优化闭环（M3 → M4）</h3>
+<h3 id="一次完整的优化闭环-m3-m4">一次完整的优化闭环（M3 → M4）</h3>
 <p>M3 首次评测时有 2 条红用例，分别指向两个已知缺陷（BUG-005 误注入 / ISSUE-006 过度兜底）。
 M4 改工具选择策略后重跑，并与 M3 的基线自动对比：</p>
 <pre><code>通过率 85% → 100%
@@ -346,9 +387,10 @@ M4 改工具选择策略后重跑，并与 M3 的基线自动对比：</p>
 （把规则调得刚好能过已知用例，同样能变绿）。所以 <code>scripts/tool_select_probe.py</code>
 用一批<strong>措辞与 <code>evals/cases.py</code> 完全不同</strong>的句子重测，当前 18/18。</p>
 <p>目标值为本项目自设，用于观察趋势，<strong>不是行业标准、也不是上线验收标准</strong>。</p>
-<h2>项目性质</h2>
+<h2 id="项目性质">项目性质</h2>
 <p>个人独立项目，非公司产品，未上生产。设计思路参考了一门 AI 产品落地课程的 HR Agent 案例材料，
 代码与评测集为独立编写。课程参考实现在本项目中仅作为对照基线（M5）。</p>
 </article>
+</div>
 </body>
 </html>

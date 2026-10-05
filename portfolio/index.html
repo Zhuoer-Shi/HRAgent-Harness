@@ -189,6 +189,21 @@
   .deliver .desc { font-weight: 400; color: #9AA3B2; font-size: 13px; }
   .deliver .arrow { color: var(--accent-bright); font-family: var(--font-mono); }
 
+  /* ---------- 关于我 / 时间线 / 技术栈 ---------- */
+  .about-lead { font-size: 18px; color: var(--text-hi); max-width: 720px; line-height: 1.75; }
+  .about-lead strong { color: var(--accent); }
+
+  .timeline { margin: 8px 0 0; }
+  .tl-item { display: flex; gap: 16px; padding-bottom: 26px; position: relative; }
+  .tl-item::before { content: ""; position: absolute; left: 5px; top: 22px; bottom: -6px; width: 2px; background: var(--line-strong); }
+  .tl-item:last-child::before { display: none; }
+  .tl-item .dot { flex: 0 0 auto; width: 12px; height: 12px; margin-top: 6px; border-radius: 50%; background: var(--accent-bright); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .tl-item .m { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .4px; }
+  .tl-item h3 { margin: 2px 0 4px; }
+  .tl-item p { margin: 0; color: var(--text-mid); max-width: 640px; }
+
+  .stack-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+
   :focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
 </style>
 </head>
@@ -205,7 +220,10 @@
     <a class="link" href="#eval"><span class="idx">05</span>评测</a>
     <a class="link" href="#dify"><span class="idx">06</span>Dify 对照</a>
     <a class="link" href="#debug"><span class="idx">07</span>踩坑</a>
-    <a class="link" href="#deliver"><span class="idx">08</span>交付物</a>
+    <a class="link" href="#about"><span class="idx">08</span>关于我</a>
+    <a class="link" href="#timeline"><span class="idx">09</span>时间线</a>
+    <a class="link" href="#stack"><span class="idx">10</span>技术栈</a>
+    <a class="link" href="#deliver"><span class="idx">11</span>交付物</a>
   </div>
 </nav>
 
@@ -267,7 +285,7 @@
       </div>
     </div>
     <div class="callout warn" style="margin-top:16px">
-      <strong>诚实红线（面试必说）：</strong>这是课程/试点项目，<b>未上生产、无真实用户流量</b>。文中所有通过率都是<b>离线固定用例集</b>的测评结果，不是上线数据。
+      <strong>诚实红线（面试必说）：</strong>这是个人项目，<b>未上生产、无真实用户流量</b>。文中所有通过率都是<b>离线固定用例集</b>的测评结果，不是上线数据。
     </div>
   </div>
 </section>
@@ -462,11 +480,129 @@ if step.action in (ACTION_CALL_TOOL, ACTION_REQUEST_CONFIRM):
   </div>
 </section>
 
+<section id="about">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-idx">08</span><h2>关于我</h2></div>
+    <p class="section-note">面试官会先问"你是个什么样的 PM"——这里直接给答案。</p>
+    <p class="about-lead">AI / Agent 方向的产品经理，正在补齐「能把 Agent 真正<strong>管住</strong>、并且<strong>讲清楚为什么</strong>」的工程底子。做这个项目不是交作业，而是给自己一个<strong>能跑、能测、能对着面试官讲证据</strong>的答案。</p>
+    <div class="grid cols-3" style="margin-top:24px">
+      <div class="card">
+        <h3>关注「能不能真落地」</h3>
+        <p style="margin:0;color:var(--text-mid)">不满足于「调 API 拼 demo」，在意可靠性、可控性、成本这些落地时才显形的硬问题。</p>
+      </div>
+      <div class="card">
+        <h3>用代码验证判断</h3>
+        <p style="margin:0;color:var(--text-mid)">选型、取舍不靠感觉：自研 harness 还是 Dify，跑同一套用例、用数据说话。</p>
+      </div>
+      <div class="card">
+        <h3>能讲清「为什么」</h3>
+        <p style="margin:0;color:var(--text-mid)">每篇 ADR 都写了「被否决的方案」和「什么情况下推翻」，面试被追问时站得住。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="timeline">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-idx">09</span><h2>项目时间线</h2></div>
+    <p class="section-note">六步走过来，每一步都有对应的代码 / 文档 / 提交记录可查。</p>
+    <div class="timeline">
+      <div class="tl-item"><div class="dot"></div><div>
+        <div class="m">M1 · 引擎骨架</div>
+        <h3>受控运行时的地基</h3>
+        <p>固定动作空间 + 框架层门控 + 会话状态机 + Trace 落盘，把「可控 / 可观测」从口号变成代码。</p>
+      </div></div>
+      <div class="tl-item"><div class="dot"></div><div>
+        <div class="m">M2 · 上下文工程</div>
+        <h3>把上下文当成一笔有额度的开支</h3>
+        <p>分区预算 + 三条裁剪优先级 + 每次运行出账本，回答「上下文不够了先砍谁」。</p>
+      </div></div>
+      <div class="tl-item"><div class="dot"></div><div>
+        <div class="m">M3 · 评测闭环</div>
+        <h3>能被打分，才算真的可控</h3>
+        <p>24 条用例 × 双裁判 × baseline 回归 + 独立探针自证不过拟合。</p>
+      </div></div>
+      <div class="tl-item"><div class="dot"></div><div>
+        <div class="m">M4 · 接真模型</div>
+        <h3>接 DeepSeek 跑真的</h3>
+        <p>live 跑通全部用例，暴露并修掉 BUG-007/008，通过率 85% → 100%，安全性未被削弱。</p>
+      </div></div>
+      <div class="tl-item"><div class="dot"></div><div>
+        <div class="m">M5 · Dify 对照</div>
+        <h3>用对照证明选型判断</h3>
+        <p>同套用例跑 Dify，产出《什么时候不该用 Dify》ADR，说清 mandatory vs advisory 的差别。</p>
+      </div></div>
+      <div class="tl-item"><div class="dot"></div><div>
+        <div class="m">M6 · 交付物</div>
+        <h3>四件套落地</h3>
+        <p>PRD + ADR 文档、可运行 harness 代码、评测报告、以及你现在看的这份作品集。</p>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<section id="stack">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-idx">10</span><h2>技术栈</h2></div>
+    <p class="section-note">刻意保持克制：核心引擎零依赖，够用就好，不为了炫技堆技术。</p>
+    <div class="grid cols-2">
+      <div class="card">
+        <h3>运行时</h3>
+        <div class="stack-tags">
+          <span class="pill neutral">纯 Python 标准库</span>
+          <span class="pill neutral">零依赖</span>
+          <span class="pill neutral">不装 Docker / DB / Dify 也能跑</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>模型</h3>
+        <div class="stack-tags">
+          <span class="pill neutral">DeepSeek（deepseek-chat · live）</span>
+          <span class="pill neutral">Stub 后端（离线回归不花钱）</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>引擎模块（7 个）</h3>
+        <div class="stack-tags">
+          <span class="pill neutral">tool_registry</span>
+          <span class="pill neutral">planner</span>
+          <span class="pill neutral">runner</span>
+          <span class="pill neutral">context</span>
+          <span class="pill neutral">state</span>
+          <span class="pill neutral">tracer</span>
+          <span class="pill neutral">llm</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>评测</h3>
+        <div class="stack-tags">
+          <span class="pill neutral">规则裁判 + LLM 裁判</span>
+          <span class="pill neutral">baseline 回归</span>
+          <span class="pill neutral">独立探针</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>对照平台</h3>
+        <div class="stack-tags">
+          <span class="pill neutral">Dify 工作流（Agent 应用 + 自定义工具 OpenAPI）</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>文档 / 站点</h3>
+        <div class="stack-tags">
+          <span class="pill neutral">Markdown → 静态 HTML</span>
+          <span class="pill neutral">本站即用这套构建脚本产出</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 </main>
 
 <footer id="deliver">
   <div class="wrap">
-    <div class="sec-head"><span class="sec-idx" style="color:var(--accent-bright)">08</span><h2 style="color:#fff">交付物四件套</h2></div>
+    <div class="sec-head"><span class="sec-idx" style="color:var(--accent-bright)">11</span><h2 style="color:#fff">交付物四件套</h2></div>
     <p style="color:#9AA3B2;margin:0 0 20px">都在同一个 git 仓库里，提交历史即"一步步做出来"的证据链。</p>
     <div class="deliver">
       <a href="docs/prd-adr.html"><span>PRD + ADR 文档<span class="desc" style="display:block">00-PRD 与 01/02/03 三篇 ADR，记录每个关键取舍与推翻条件</span></span><span class="arrow">→</span></a>
@@ -474,7 +610,7 @@ if step.action in (ACTION_CALL_TOOL, ACTION_REQUEST_CONFIRM):
       <a href="docs/report.html"><span>评测报告 + Dify 对比<span class="desc" style="display:block">24 条用例逐条结果，通过/未判定/不可比三桶口径</span></span><span class="arrow">→</span></a>
       <a href="docs/debug.html"><span>调试日志<span class="desc" style="display:block">BUG-001~008 + Dify 踩坑，面试可讲的定位过程</span></span><span class="arrow">→</span></a>
     </div>
-    <p style="margin:32px 0 0"><strong>诚实声明：</strong>本项目为个人课程/试点项目，未上生产、无真实用户流量。文中通过率均为离线固定用例集测评结果，非上线数据；目标值自设，非行业标准。</p>
+    <p style="margin:32px 0 0"><strong>诚实声明：</strong>本项目为个人项目，未上生产、无真实用户流量。文中通过率均为离线固定用例集测评结果，非上线数据；目标值自设，非行业标准。</p>
     <p style="margin-bottom:0">HRAgent Harness · 受控 Agent 运行时 + 评测闭环 · 纯 Python 标准库 · 2026</p>
   </div>
 </footer>

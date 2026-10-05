@@ -17,15 +17,29 @@
   * { box-sizing: border-box; }
   body { margin:0; font-family:var(--font-ui); background:var(--paper); color:var(--text-hi); line-height:1.75; font-size:15px; }
   .doc-nav { position:sticky; top:0; z-index:20; background:rgba(10,15,26,.9); backdrop-filter:blur(8px); border-bottom:1px solid rgba(255,255,255,.08); }
-  .doc-nav .inner { max-width:860px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:16px; }
+  .doc-nav .inner { max-width:1100px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:16px; }
   .doc-nav a { color:var(--accent-bright); text-decoration:none; font-size:14px; font-family:var(--font-mono); }
   .doc-nav a:hover { text-decoration:underline; }
   .doc-nav .t { color:#fff; font-weight:600; font-size:14px; }
-  article.markdown { max-width:860px; margin:0 auto; padding:40px 24px 96px; }
+
+  .doc-layout { max-width:1100px; margin:0 auto; display:flex; gap:36px; align-items:flex-start; padding:0 24px 96px; }
+
+  .toc-side { position:sticky; top:76px; flex:0 0 236px; max-height:calc(100vh - 100px); overflow-y:auto; padding:28px 0 4px; }
+  .toc-side summary { list-style:none; cursor:pointer; font-family:var(--font-mono); font-size:12px; font-weight:700; color:var(--text-low); letter-spacing:.6px; text-transform:uppercase; user-select:none; margin-bottom:10px; }
+  .toc-side summary::-webkit-details-marker { display:none; }
+  .toc ul { list-style:none; margin:0; padding:0; }
+  .toc ul ul { margin-left:13px; padding-left:11px; border-left:1px solid var(--line); }
+  .toc li { margin:2px 0; }
+  .toc a { color:var(--text-mid); font-size:13px; line-height:1.55; text-decoration:none; display:block; padding:2px 0; }
+  .toc a:hover { color:var(--accent); }
+  .toc ul ul a { color:var(--text-low); font-size:12.5px; }
+
+  article.markdown { flex:1 1 auto; min-width:0; padding:40px 0 0; }
   .markdown h1 { font-size:30px; letter-spacing:-0.5px; margin:0 0 8px; padding-bottom:12px; border-bottom:2px solid var(--line); }
   .markdown h2 { font-size:24px; margin:44px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line); }
   .markdown h3 { font-size:19px; margin:30px 0 10px; }
   .markdown h4 { font-size:16px; margin:22px 0 8px; color:var(--text-mid); }
+  .markdown h1, .markdown h2, .markdown h3, .markdown h4 { scroll-margin-top: 76px; }
   .markdown p { margin:12px 0; }
   .markdown a { color:var(--accent); }
   .markdown code { font-family:var(--font-mono); font-size:13px; background:var(--paper); border:1px solid var(--line); padding:1px 6px; border-radius:5px; color:#0E7490; }
@@ -41,13 +55,151 @@
   .markdown li { margin:5px 0; }
   .markdown hr { border:none; border-top:1px solid var(--line); margin:32px 0; }
   .markdown img { max-width:100%; }
+
+  @media (max-width: 900px) {
+    .doc-layout { flex-direction:column; gap:8px; }
+    .toc-side { position:static; flex:0 0 auto; width:100%; max-height:none; padding:20px 0 0; border-bottom:1px solid var(--line); }
+    .toc ul ul { display:none; }
+    article.markdown { padding:24px 0 0; }
+  }
 </style>
 </head>
 <body>
 <div class="doc-nav"><div class="inner"><a href="../index.html">← 返回作品集</a><span class="t">PRD + ADR 文档</span></div></div>
+<div class="doc-layout">
+<aside class="toc-side"><details class="toc" open><summary>目录</summary>
+<ul>
+<li><a href="#一个可观测-可评测的受控-agent-运行时">一个可观测、可评测的受控 Agent 运行时</a></li>
+<li><a href="#0-文档说明">0. 文档说明</a><ul>
+<li><a href="#0-1-这份-prd-定义什么">0.1 这份 PRD 定义什么</a></li>
+<li><a href="#0-2-为什么这样定位">0.2 为什么这样定位</a></li>
+<li><a href="#0-3-参考与致谢">0.3 参考与致谢</a></li>
+</ul>
+</li>
+<li><a href="#1-产品概述">1. 产品概述</a><ul>
+<li><a href="#1-1-一句话说清">1.1 一句话说清</a></li>
+<li><a href="#1-2-解决什么问题">1.2 解决什么问题</a></li>
+<li><a href="#1-3-产品价值-对三类对象">1.3 产品价值（对三类对象）</a></li>
+<li><a href="#1-4-成功标准-本项目自设目标-非行业标准">1.4 成功标准（本项目自设目标，非行业标准）</a></li>
+</ul>
+</li>
+<li><a href="#2-产品边界">2. 产品边界</a><ul>
+<li><a href="#2-1-范围内">2.1 范围内</a></li>
+<li><a href="#2-2-明确不做-p0-声明-避免范围膨胀">2.2 明确不做（P0 声明，避免范围膨胀）</a></li>
+<li><a href="#2-3-三条设计底线">2.3 三条设计底线</a></li>
+</ul>
+</li>
+<li><a href="#3-用户与场景">3. 用户与场景</a><ul>
+<li><a href="#3-1-用户角色">3.1 用户角色</a></li>
+<li><a href="#3-2-核心用户故事">3.2 核心用户故事</a></li>
+</ul>
+</li>
+<li><a href="#4-系统架构">4. 系统架构</a><ul>
+<li><a href="#4-1-三层结构">4.1 三层结构</a></li>
+<li><a href="#4-2-引擎层模块清单">4.2 引擎层模块清单</a></li>
+<li><a href="#4-3-双轨设计-自研-harness-vs-dify">4.3 双轨设计（自研 harness vs Dify）</a></li>
+</ul>
+</li>
+<li><a href="#5-功能需求">5. 功能需求</a><ul>
+<li><a href="#5-1-工具注册表-fr-001-组">5.1 工具注册表（FR-001 组）</a></li>
+<li><a href="#5-2-受控规划器-fr-002-组">5.2 受控规划器（FR-002 组）</a></li>
+<li><a href="#5-3-条件缺口三分类-fr-003-组">5.3 条件缺口三分类（FR-003 组）</a></li>
+<li><a href="#5-4-上下文管理-fr-004-组">5.4 上下文管理（FR-004 组）</a></li>
+<li><a href="#5-5-会话状态机-fr-005-组">5.5 会话状态机（FR-005 组）</a></li>
+<li><a href="#5-6-trace-fr-006-组">5.6 Trace（FR-006 组）</a></li>
+<li><a href="#5-7-评测体系-fr-007-组">5.7 评测体系（FR-007 组）</a></li>
+</ul>
+</li>
+<li><a href="#6-核心流程">6. 核心流程</a><ul>
+<li><a href="#6-1-agent-执行主链路">6.1 Agent 执行主链路</a></li>
+<li><a href="#6-2-需要覆盖的异常场景">6.2 需要覆盖的异常场景</a></li>
+</ul>
+</li>
+<li><a href="#7-需求描述-ears-格式">7. 需求描述（EARS 格式）</a></li>
+<li><a href="#8-数据指标与成功度量">8. 数据指标与成功度量</a><ul>
+<li><a href="#8-1-北极星指标">8.1 北极星指标</a></li>
+<li><a href="#8-2-指标表">8.2 指标表</a></li>
+</ul>
+</li>
+<li><a href="#9-验收标准">9. 验收标准</a><ul>
+<li><a href="#9-1-功能验收">9.1 功能验收</a></li>
+<li><a href="#9-2-评测验收">9.2 评测验收</a></li>
+<li><a href="#9-3-工程验收">9.3 工程验收</a></li>
+</ul>
+</li>
+<li><a href="#10-双轨对照设计">10. 双轨对照设计</a><ul>
+<li><a href="#10-1-为什么要对照">10.1 为什么要对照</a></li>
+<li><a href="#10-2-对照维度">10.2 对照维度</a></li>
+<li><a href="#10-3-预期结论-待数据验证-不预设">10.3 预期结论（待数据验证，不预设）</a></li>
+</ul>
+</li>
+<li><a href="#11-风险与-pre-mortem">11. 风险与 Pre-Mortem</a></li>
+<li><a href="#12-里程碑计划">12. 里程碑计划</a></li>
+<li><a href="#13-待确认问题">13. 待确认问题</a></li>
+<li><a href="#1-背景与问题">1. 背景与问题</a></li>
+<li><a href="#2-决策">2. 决策</a><ul>
+<li><a href="#2-1-分区预算">2.1 分区预算</a></li>
+<li><a href="#2-2-三条裁剪优先级-这条是本-adr-的核心">2.2 三条裁剪优先级（这条是本 ADR 的核心）</a></li>
+<li><a href="#2-3-每次运行产出账本">2.3 每次运行产出账本</a></li>
+</ul>
+</li>
+<li><a href="#3-关键取舍-为什么高风险工具不受预算约束">3. 关键取舍：为什么高风险工具不受预算约束</a></li>
+<li><a href="#4-被否决的备选方案">4. 被否决的备选方案</a></li>
+<li><a href="#5-代价与已知局限">5. 代价与已知局限</a></li>
+<li><a href="#6-什么时候该推翻这个决策">6. 什么时候该推翻这个决策</a></li>
+<li><a href="#7-实测结果">7. 实测结果</a></li>
+<li><a href="#1-背景">1. 背景</a></li>
+<li><a href="#2-三级演进">2. 三级演进</a></li>
+<li><a href="#3-决策一-强弱信号加权打分-全局阈值">3. 决策一：强弱信号加权打分 + 全局阈值</a><ul>
+<li><a href="#规则">规则</a></li>
+<li><a href="#为什么是这样">为什么是这样</a></li>
+<li><a href="#配套-命中说明写进账本">配套：命中说明写进账本</a></li>
+</ul>
+</li>
+<li><a href="#4-决策二-取消-高风险工具强制注入">4. 决策二：取消「高风险工具强制注入」</a><ul>
+<li><a href="#原来的做法与理由">原来的做法与理由</a></li>
+<li><a href="#为什么不成立">为什么不成立</a></li>
+<li><a href="#失败方向的取舍">失败方向的取舍</a></li>
+<li><a href="#保留的部分">保留的部分</a></li>
+</ul>
+</li>
+<li><a href="#5-被否决的方案">5. 被否决的方案</a><ul>
+<li><a href="#否决-embedding-向量相似度">否决：embedding / 向量相似度</a></li>
+<li><a href="#否决-llm-路由器-用模型选工具">否决：LLM 路由器（用模型选工具）</a></li>
+</ul>
+</li>
+<li><a href="#6-验证">6. 验证</a><ul>
+<li><a href="#6-1-评测集回归">6.1 评测集回归</a></li>
+<li><a href="#6-2-独立探针-自证不是过拟合">6.2 独立探针（自证不是过拟合）</a></li>
+<li><a href="#6-3-上下文收益-忠实基线复算">6.3 上下文收益（忠实基线复算）</a></li>
+</ul>
+</li>
+<li><a href="#7-已知边界与推翻条件">7. 已知边界与推翻条件</a><ul>
+<li><a href="#这套方案做不到的事">这套方案做不到的事</a></li>
+<li><a href="#什么情况下应该推翻本-adr">什么情况下应该推翻本 ADR</a></li>
+</ul>
+</li>
+<li><a href="#8-一句话总结">8. 一句话总结</a></li>
+<li><a href="#1-背景-为什么要有这篇-adr">1. 背景（为什么要有这篇 ADR）</a></li>
+<li><a href="#2-决策-一句话">2. 决策（一句话）</a></li>
+<li><a href="#3-论据与证据">3. 论据与证据</a><ul>
+<li><a href="#论据一-控制强度-mandatory-代码强制-vs-advisory-提示词建议">论据一：控制强度 —— mandatory（代码强制）vs advisory（提示词建议）</a></li>
+<li><a href="#论据二-可观测性-span-级-可回放-vs-会话级-仅摘要">论据二：可观测性 —— span 级（可回放）vs 会话级（仅摘要）</a></li>
+<li><a href="#论据三-工具接入模型-自研代码-vs-必须包装成真实-http-api">论据三：工具接入模型 —— 自研代码 vs 必须包装成真实 HTTP API</a></li>
+<li><a href="#论据四-次要-可回归性-自带评测闭环">论据四（次要）：可回归性 —— 自带评测闭环</a></li>
+</ul>
+</li>
+<li><a href="#4-定量对比现状-诚实标注未完成部分">4. 定量对比现状（诚实标注未完成部分）</a></li>
+<li><a href="#5-后果-选错会失去-付出什么">5. 后果（选错会失去 / 付出什么）</a></li>
+<li><a href="#6-被否决的方案">6. 被否决的方案</a></li>
+<li><a href="#7-决策规则-给面试官的-选型检查表">7. 决策规则（给面试官的"选型检查表"）</a></li>
+<li><a href="#8-推翻条件-什么情况下本-adr-要重议">8. 推翻条件（什么情况下本 ADR 要重议）</a></li>
+<li><a href="#9-待核实清单-首次联调按实测校正-不当前置结论">9. 待核实清单（首次联调按实测校正，不当前置结论）</a></li>
+</ul>
+</details></aside>
 <article class="markdown">
-<h1>PRD · HRAgent Harness</h1>
-<h2>一个可观测、可评测的受控 Agent 运行时</h2>
+<h1 id="prd-hragent-harness">PRD · HRAgent Harness</h1>
+<h2 id="一个可观测-可评测的受控-agent-运行时">一个可观测、可评测的受控 Agent 运行时</h2>
 <table>
 <thead>
 <tr>
@@ -83,11 +235,11 @@
 </tbody>
 </table>
 <hr />
-<h2>0. 文档说明</h2>
-<h3>0.1 这份 PRD 定义什么</h3>
+<h2 id="0-文档说明">0. 文档说明</h2>
+<h3 id="0-1-这份-prd-定义什么">0.1 这份 PRD 定义什么</h3>
 <p>本 PRD 定义 <strong>HRAH 是什么、为谁做、解决什么问题、包含哪些能力、怎么算做对了</strong>。</p>
 <p>它不是一份"HR 系统"的 PRD。HR 招聘（JD 生成、简历筛选、面试安排、邮件通知）在本项目中是<strong>验证场景</strong>，不是产品本体。产品本体是让这些任务能被稳定、可控、可追溯地完成的<strong>运行时</strong>，以及证明它确实做到位的<strong>评测体系</strong>。</p>
-<h3>0.2 为什么这样定位</h3>
+<h3 id="0-2-为什么这样定位">0.2 为什么这样定位</h3>
 <p>企业里落地 AI Agent 时，真正的难点从来不是"接一个大模型"，而是四件没人愿意做的事：</p>
 <table>
 <thead>
@@ -116,7 +268,7 @@
 </tbody>
 </table>
 <p>本项目的目标就是把这四件事<strong>做成显式设计</strong>，并在一个真实场景里跑出可验证的数据。</p>
-<h3>0.3 参考与致谢</h3>
+<h3 id="0-3-参考与致谢">0.3 参考与致谢</h3>
 <p>本项目为个人独立设计与实现。设计思路参考了：</p>
 <ul>
 <li>一门 AI 产品落地课程提供的 HR Agent 案例材料（产品文档与参考实现），用于理解业务场景与评测框架的组织方式</li>
@@ -125,12 +277,12 @@
 </ul>
 <p><strong>本项目的代码、评测集、架构决策均为独立编写，未复制课程提供的源码。</strong> 课程参考实现在本项目中仅作为<strong>对照基线</strong>存在（见第 10 节）。</p>
 <hr />
-<h2>1. 产品概述</h2>
-<h3>1.1 一句话说清</h3>
+<h2 id="1-产品概述">1. 产品概述</h2>
+<h3 id="1-1-一句话说清">1.1 一句话说清</h3>
 <blockquote>
 <p>HRAH 是一个让 AI Agent 干活"有边界、看得见、测得准"的运行时：用户（HR）用一句话下达任务，系统在固定的动作空间内决定该调什么工具、缺什么信息就追问、涉及高风险动作先停下等人确认，并且每一次决策都留下可回放的 Trace；配套一套评测体系，用固定用例集反复跑，量化它到底靠不靠谱。</p>
 </blockquote>
-<h3>1.2 解决什么问题</h3>
+<h3 id="1-2-解决什么问题">1.2 解决什么问题</h3>
 <table>
 <thead>
 <tr>
@@ -179,7 +331,7 @@
 </tr>
 </tbody>
 </table>
-<h3>1.3 产品价值（对三类对象）</h3>
+<h3 id="1-3-产品价值-对三类对象">1.3 产品价值（对三类对象）</h3>
 <table>
 <thead>
 <tr>
@@ -202,7 +354,7 @@
 </tr>
 </tbody>
 </table>
-<h3>1.4 成功标准（本项目自设目标，非行业标准）</h3>
+<h3 id="1-4-成功标准-本项目自设目标-非行业标准">1.4 成功标准（本项目自设目标，非行业标准）</h3>
 <table>
 <thead>
 <tr>
@@ -234,8 +386,8 @@
 </tbody>
 </table>
 <hr />
-<h2>2. 产品边界</h2>
-<h3>2.1 范围内</h3>
+<h2 id="2-产品边界">2. 产品边界</h2>
+<h3 id="2-1-范围内">2.1 范围内</h3>
 <table>
 <thead>
 <tr>
@@ -266,7 +418,7 @@
 </tr>
 </tbody>
 </table>
-<h3>2.2 明确不做（P0 声明，避免范围膨胀）</h3>
+<h3 id="2-2-明确不做-p0-声明-避免范围膨胀">2.2 明确不做（P0 声明，避免范围膨胀）</h3>
 <ul>
 <li>❌ <strong>不做完整 HR SaaS</strong>：没有登录鉴权、没有多租户、没有角色权限体系、没有组织架构</li>
 <li>❌ <strong>不做真实邮件发送</strong>：邮件工具为 mock，落草稿文件即可，不接真实 SMTP</li>
@@ -278,15 +430,15 @@
 <blockquote>
 <p>说明：这些"不做"是<strong>主动的范围裁剪</strong>，不是能力缺失。裁剪原则是——凡是不能证明"Agent 运行时能力"的工作，一律砍掉。</p>
 </blockquote>
-<h3>2.3 三条设计底线</h3>
+<h3 id="2-3-三条设计底线">2.3 三条设计底线</h3>
 <ol>
 <li><strong>AI 不替人做最终决定</strong>：高风险动作必须经人工确认，确认前只出草稿。</li>
 <li><strong>一切行为可追溯</strong>：任何一次运行都能还原完整决策链路。</li>
 <li><strong>一切结论有数据</strong>：不出现"效果不错"这类无法验证的表述，所有结论来自评测报告。</li>
 </ol>
 <hr />
-<h2>3. 用户与场景</h2>
-<h3>3.1 用户角色</h3>
+<h2 id="3-用户与场景">3. 用户与场景</h2>
+<h3 id="3-1-用户角色">3.1 用户角色</h3>
 <table>
 <thead>
 <tr>
@@ -316,7 +468,7 @@
 <blockquote>
 <p>说明：本项目不服务真实外部用户，HR 角色由测试用例模拟。</p>
 </blockquote>
-<h3>3.2 核心用户故事</h3>
+<h3 id="3-2-核心用户故事">3.2 核心用户故事</h3>
 <table>
 <thead>
 <tr>
@@ -390,8 +542,8 @@
 </tbody>
 </table>
 <hr />
-<h2>4. 系统架构</h2>
-<h3>4.1 三层结构</h3>
+<h2 id="4-系统架构">4. 系统架构</h2>
+<h3 id="4-1-三层结构">4.1 三层结构</h3>
 <pre><code>┌─────────────────────────────────────────────┐
 │  场景层  HR 任务：JD / 简历 / 面试 / 邮件      │
 └─────────────────────────────────────────────┘
@@ -406,7 +558,7 @@
 │  评测层  用例集 · 双裁判 · 重复运行 · 回归     │
 └─────────────────────────────────────────────┘
 </code></pre>
-<h3>4.2 引擎层模块清单</h3>
+<h3 id="4-2-引擎层模块清单">4.2 引擎层模块清单</h3>
 <table>
 <thead>
 <tr>
@@ -448,7 +600,7 @@
 </tr>
 </tbody>
 </table>
-<h3>4.3 双轨设计（自研 harness vs Dify）</h3>
+<h3 id="4-3-双轨设计-自研-harness-vs-dify">4.3 双轨设计（自研 harness vs Dify）</h3>
 <p>同一批 HR 任务有两条实现路径，跑同一套评测集：</p>
 <table>
 <thead>
@@ -478,8 +630,8 @@
 </table>
 <p>对照结论将沉淀为一篇 ADR：《什么情况下必须自研 harness，什么情况下用 Dify 就够了》。</p>
 <hr />
-<h2>5. 功能需求</h2>
-<h3>5.1 工具注册表（FR-001 组）</h3>
+<h2 id="5-功能需求">5. 功能需求</h2>
+<h3 id="5-1-工具注册表-fr-001-组">5.1 工具注册表（FR-001 组）</h3>
 <p>工具是 Agent 唯一被允许执行的动作来源。</p>
 <table>
 <thead>
@@ -548,7 +700,7 @@
 </tbody>
 </table>
 <p>每个工具声明包含：名称、描述、参数 JSON Schema、风险等级、返回结构、失败语义。</p>
-<h3>5.2 受控规划器（FR-002 组）</h3>
+<h3 id="5-2-受控规划器-fr-002-组">5.2 受控规划器（FR-002 组）</h3>
 <p>规划器的动作空间<strong>固定为 4 种</strong>，不允许其他输出：</p>
 <table>
 <thead>
@@ -576,7 +728,7 @@
 </tr>
 </tbody>
 </table>
-<h3>5.3 条件缺口三分类（FR-003 组）</h3>
+<h3 id="5-3-条件缺口三分类-fr-003-组">5.3 条件缺口三分类（FR-003 组）</h3>
 <p>当任务无法直接执行时，判断缺口类型并采取不同策略：</p>
 <table>
 <thead>
@@ -604,7 +756,7 @@
 </tr>
 </tbody>
 </table>
-<h3>5.4 上下文管理（FR-004 组）</h3>
+<h3 id="5-4-上下文管理-fr-004-组">5.4 上下文管理（FR-004 组）</h3>
 <p><strong>Token 预算分配（占模型窗口比例）</strong></p>
 <table>
 <thead>
@@ -643,7 +795,7 @@
 </tbody>
 </table>
 <p>超出预算时必须记录一次 <code>context_truncated</code> 事件到 Trace。</p>
-<h3>5.5 会话状态机（FR-005 组）</h3>
+<h3 id="5-5-会话状态机-fr-005-组">5.5 会话状态机（FR-005 组）</h3>
 <pre><code>IDLE ──&gt; INTENT_RESOLVED ──&gt; PLANNING ──&gt; EXECUTING ──&gt; DONE
               │                  │             │
               │                  ↓             ├──&gt; FAILED
@@ -651,14 +803,14 @@
               │          AWAITING_CONFIRM      └──&gt; ESCALATED
               └──&gt; CLARIFYING
 </code></pre>
-<h3>5.6 Trace（FR-006 组）</h3>
+<h3 id="5-6-trace-fr-006-组">5.6 Trace（FR-006 组）</h3>
 <ul>
 <li>每次运行生成唯一 <code>trace_id</code></li>
 <li>Span 类型：<code>intent</code> / <code>plan</code> / <code>tool_call</code> / <code>gate</code> / <code>respond</code></li>
 <li>每个 span 记录：父 span、类型、输入摘要、输出摘要、耗时、token 数、状态</li>
 <li>支持按 trace_id 单条回放，输出人类可读的时间线</li>
 </ul>
-<h3>5.7 评测体系（FR-007 组）</h3>
+<h3 id="5-7-评测体系-fr-007-组">5.7 评测体系（FR-007 组）</h3>
 <p><strong>用例集（24 条，分 4 类）</strong></p>
 <table>
 <thead>
@@ -715,8 +867,8 @@
 </table>
 <p><strong>运行方式</strong>：每条用例重复 3 轮，计算一致率（稳定性）；支持 <code>--baseline</code> 与历史版本对比。</p>
 <hr />
-<h2>6. 核心流程</h2>
-<h3>6.1 Agent 执行主链路</h3>
+<h2 id="6-核心流程">6. 核心流程</h2>
+<h3 id="6-1-agent-执行主链路">6.1 Agent 执行主链路</h3>
 <pre><code>1. 用户输入
 2. 意图识别 ──────────&gt; 不确定则进入 CLARIFYING
 3. 收集槽位信息
@@ -730,7 +882,7 @@
 8. 结果整合，回到 4 直到无缺口
 9. FINISH，给出最终回应
 </code></pre>
-<h3>6.2 需要覆盖的异常场景</h3>
+<h3 id="6-2-需要覆盖的异常场景">6.2 需要覆盖的异常场景</h3>
 <table>
 <thead>
 <tr>
@@ -762,7 +914,7 @@
 </tbody>
 </table>
 <hr />
-<h2>7. 需求描述（EARS 格式）</h2>
+<h2 id="7-需求描述-ears-格式">7. 需求描述（EARS 格式）</h2>
 <p><strong>通用约束（Ubiquitous）</strong></p>
 <ul>
 <li>FR-001：系统应当只允许调用工具注册表中声明的工具。</li>
@@ -795,11 +947,11 @@
 <li>FR-016：在配置开启 Dify 对照模式时，系统应当用同一套用例集调用 Dify 工作流并输出对照报告。</li>
 </ul>
 <hr />
-<h2>8. 数据指标与成功度量</h2>
-<h3>8.1 北极星指标</h3>
+<h2 id="8-数据指标与成功度量">8. 数据指标与成功度量</h2>
+<h3 id="8-1-北极星指标">8.1 北极星指标</h3>
 <p><strong>可控完成率</strong> = 在固定用例集上，「任务完成 且 全程动作合规」的比例。</p>
 <p>选它的理由：单纯的任务完成率会掩盖"蒙对了但过程违规"，而 Agent 落地的风险恰恰来自过程不可控。</p>
-<h3>8.2 指标表</h3>
+<h3 id="8-2-指标表">8.2 指标表</h3>
 <table>
 <thead>
 <tr>
@@ -870,8 +1022,8 @@
 <p>⚠️ 以上目标值为<strong>本项目自设目标</strong>，用于驱动迭代，不是行业验收标准，也不代表线上表现。</p>
 </blockquote>
 <hr />
-<h2>9. 验收标准</h2>
-<h3>9.1 功能验收</h3>
+<h2 id="9-验收标准">9. 验收标准</h2>
+<h3 id="9-1-功能验收">9.1 功能验收</h3>
 <table>
 <thead>
 <tr>
@@ -902,7 +1054,7 @@
 </tr>
 </tbody>
 </table>
-<h3>9.2 评测验收</h3>
+<h3 id="9-2-评测验收">9.2 评测验收</h3>
 <table>
 <thead>
 <tr>
@@ -929,7 +1081,7 @@
 </tr>
 </tbody>
 </table>
-<h3>9.3 工程验收</h3>
+<h3 id="9-3-工程验收">9.3 工程验收</h3>
 <table>
 <thead>
 <tr>
@@ -953,10 +1105,10 @@
 </tbody>
 </table>
 <hr />
-<h2>10. 双轨对照设计</h2>
-<h3>10.1 为什么要对照</h3>
+<h2 id="10-双轨对照设计">10. 双轨对照设计</h2>
+<h3 id="10-1-为什么要对照">10.1 为什么要对照</h3>
 <p>"为什么不用现成的编排平台"是 Agent 产品岗的高频问题。空口回答没有说服力，用同一把尺子量两条路才有。</p>
-<h3>10.2 对照维度</h3>
+<h3 id="10-2-对照维度">10.2 对照维度</h3>
 <table>
 <thead>
 <tr>
@@ -987,14 +1139,14 @@
 </tr>
 </tbody>
 </table>
-<h3>10.3 预期结论（待数据验证，不预设）</h3>
+<h3 id="10-3-预期结论-待数据验证-不预设">10.3 预期结论（待数据验证，不预设）</h3>
 <ul>
 <li>Dify 在<strong>标准流程</strong>上更快落地</li>
 <li>自研 harness 在<strong>失败定位、上下文控制、状态管理</strong>上更可控</li>
 <li>结论写入 ADR-00X：《编排平台选型：什么时候必须自研》</li>
 </ul>
 <hr />
-<h2>11. 风险与 Pre-Mortem</h2>
+<h2 id="11-风险与-pre-mortem">11. 风险与 Pre-Mortem</h2>
 <table>
 <thead>
 <tr>
@@ -1032,7 +1184,7 @@
 </tbody>
 </table>
 <hr />
-<h2>12. 里程碑计划</h2>
+<h2 id="12-里程碑计划">12. 里程碑计划</h2>
 <table>
 <thead>
 <tr>
@@ -1080,7 +1232,7 @@
 </tbody>
 </table>
 <hr />
-<h2>13. 待确认问题</h2>
+<h2 id="13-待确认问题">13. 待确认问题</h2>
 <table>
 <thead>
 <tr>
@@ -1115,14 +1267,14 @@
 <hr />
 <p><em>本文档将随实现过程持续修订，每次重大变更记录版本号与变更原因。</em></p>
 <hr />
-<h1>ADR-001 · 上下文按分区预算管理，预算不足时按固定顺序裁剪</h1>
+<h1 id="adr-001-上下文按分区预算管理-预算不足时按固定顺序裁剪">ADR-001 · 上下文按分区预算管理，预算不足时按固定顺序裁剪</h1>
 <ul>
 <li><strong>日期</strong>：2026-10-05</li>
 <li><strong>状态</strong>：已接受（M2 已实现）</li>
 <li><strong>关联</strong>：PRD 5.4 / FR-004 / FR-005 / FR-006 / FR-013</li>
 </ul>
 <hr />
-<h2>1. 背景与问题</h2>
+<h2 id="1-背景与问题">1. 背景与问题</h2>
 <p>M1 的做法是"固定注入 top_k=5 个工具 + 历史对话全量拼接"。跑起来之后暴露两个问题：</p>
 <ol>
 <li><strong>无关工具白吃 token</strong>：写 JD 时把 <code>draft_email</code>、<code>generate_rubric</code> 也塞进去了
@@ -1132,8 +1284,8 @@
    要么撑爆窗口，要么把工具定义挤掉——而工具定义被挤掉会导致模型臆造工具。</li>
 </ol>
 <p>根因是：<strong>上下文从未被当作一项有额度的资源来管理</strong>，各段内容的增长互不相让。</p>
-<h2>2. 决策</h2>
-<h3>2.1 分区预算</h3>
+<h2 id="2-决策">2. 决策</h2>
+<h3 id="2-1-分区预算">2.1 分区预算</h3>
 <p>把一次规划调用的窗口切成 5 个区，每区独立额度：</p>
 <table>
 <thead>
@@ -1171,7 +1323,7 @@
 </tr>
 </tbody>
 </table>
-<h3>2.2 三条裁剪优先级（这条是本 ADR 的核心）</h3>
+<h3 id="2-2-三条裁剪优先级-这条是本-adr-的核心">2.2 三条裁剪优先级（这条是本 ADR 的核心）</h3>
 <ol>
 <li><strong>执行结果优先于历史对话</strong> —— 本轮已经调了什么工具、返回了什么，
    是当前决策的直接依据；早期客套话不是。</li>
@@ -1180,18 +1332,18 @@
 <li><strong>宁可压缩，不要静默丢弃</strong> —— 压缩会留下"这里曾有 N 条消息"的痕迹，
    静默丢弃不会。任何一次裁剪都必须写进账本与 Trace。</li>
 </ol>
-<h3>2.3 每次运行产出账本</h3>
+<h3 id="2-3-每次运行产出账本">2.3 每次运行产出账本</h3>
 <p><code>ContextPackage</code> 记录：各分区用量/上限、注入了哪些工具、裁掉了哪些、
 历史压缩与丢弃条数、备注。账本进 Trace 的 <code>context.build</code> span，
 也能在终端用 <code>python demo.py --context</code> 直接打印。</p>
-<h2>3. 关键取舍：为什么高风险工具不受预算约束</h2>
+<h2 id="3-关键取舍-为什么高风险工具不受预算约束">3. 关键取舍：为什么高风险工具不受预算约束</h2>
 <p>这是<strong>安全优先于成本</strong>的取舍。</p>
 <p>工具定义被裁剪的直接后果不是"少一个功能"，而是<strong>模型不知道这个能力存在，
 于是自己编一个</strong>。在 HR 场景里，一个被臆造出来的"发邮件"比多花 300 个 token
 危险得多——前者可能产生真实的对外副作用。</p>
 <p>代价：工具分区的实际占用可能超过 20%。这个代价被显式接受，
 并在账本里以备注形式暴露，而不是悄悄吞掉。</p>
-<h2>4. 被否决的备选方案</h2>
+<h2 id="4-被否决的备选方案">4. 被否决的备选方案</h2>
 <table>
 <thead>
 <tr>
@@ -1222,7 +1374,7 @@
 </tr>
 </tbody>
 </table>
-<h2>5. 代价与已知局限</h2>
+<h2 id="5-代价与已知局限">5. 代价与已知局限</h2>
 <ol>
 <li><strong>token 估算是粗估</strong>（CJK 按 1 字 ≈ 1 token，其余 4 字符 ≈ 1 token，刻意高估）。
    不追求与真实分词器一致——预算控制宁可多裁，不要超窗。</li>
@@ -1230,14 +1382,14 @@
 <li><strong>工具选择仍靠字面关键词</strong>，对"安排…面试"这类间隔表达鲁棒性差（ISSUE-004，
    M2 阶段已由账本暴露并临时修补，根治留到 M4）。</li>
 </ol>
-<h2>6. 什么时候该推翻这个决策</h2>
+<h2 id="6-什么时候该推翻这个决策">6. 什么时候该推翻这个决策</h2>
 <p>出现下列任一情况时应重新评估：</p>
 <ul>
 <li><strong>意图识别准确率 &lt; 90%</strong>（M3 评测集会给出这个数）→ 换 embedding 相似度选工具</li>
 <li><strong>上下文超预算率 &gt; 10%</strong> 且失败用例归因到"历史被裁掉了" → 换 LLM 摘要</li>
 <li>工具数量增长到 20+ → 分区比例需要重新标定，tools 分区可能要提到 30%</li>
 </ul>
-<h2>7. 实测结果</h2>
+<h2 id="7-实测结果">7. 实测结果</h2>
 <p><code>python scripts/context_benchmark.py</code>（5 个场景 × 4 档历史长度）：</p>
 <table>
 <thead>
@@ -1266,7 +1418,7 @@
 <p>说明：用例与对话历史均由本项目自造，用于验证机制是否生效，不代表真实线上分布。</p>
 </blockquote>
 <hr />
-<h1>ADR-002 · 工具选择策略：为什么放弃「高风险工具强制注入」</h1>
+<h1 id="adr-002-工具选择策略-为什么放弃-高风险工具强制注入">ADR-002 · 工具选择策略：为什么放弃「高风险工具强制注入」</h1>
 <ul>
 <li><strong>状态</strong>：已采纳（M4 实现并有评测数据支撑）</li>
 <li><strong>日期</strong>：2026-10-05</li>
@@ -1274,7 +1426,7 @@
 <li><strong>影响范围</strong>：<code>harness/tool_registry.py</code>、<code>harness/context.py</code>、<code>tools/hr_tools.py</code></li>
 </ul>
 <hr />
-<h2>1. 背景</h2>
+<h2 id="1-背景">1. 背景</h2>
 <p><code>ContextManager</code> 需要在每一轮决定「把哪些工具的定义摆到模型面前」。
 这个决定同时牵动三件事：<strong>token 成本、正确性、安全性</strong>。</p>
 <p>M3 的评测集把它变成了可度量的东西，于是立刻暴露出两个方向相反的问题：</p>
@@ -1307,7 +1459,7 @@
 <p><strong>漏选和误选是同一根因的两面</strong>：字面匹配没有语义。
 只看「有没有匹配上」，等于把问题从一头推到另一头还自我感觉良好。</p>
 <hr />
-<h2>2. 三级演进</h2>
+<h2 id="2-三级演进">2. 三级演进</h2>
 <table>
 <thead>
 <tr>
@@ -1335,13 +1487,13 @@
 </tbody>
 </table>
 <hr />
-<h2>3. 决策一：强弱信号加权打分 + 全局阈值</h2>
-<h3>规则</h3>
+<h2 id="3-决策一-强弱信号加权打分-全局阈值">3. 决策一：强弱信号加权打分 + 全局阈值</h2>
+<h3 id="规则">规则</h3>
 <pre><code>strong（+3）  「动作 + 对象」的短语，用正则表达、允许中间插入修饰语
 weak  （+1）  单个泛词，区分度低
 门槛  （ 3）  至少命中一个强信号才入选
 </code></pre>
-<h3>为什么是这样</h3>
+<h3 id="为什么是这样">为什么是这样</h3>
 <p><strong>中文的「动词 + 宾语」天然不连续。</strong> 这是所有难度来源：</p>
 <pre><code class="language-python">r&quot;安排.{0,10}?面试&quot;          # 吃下「安排明天下午面试」
 r&quot;候选人.{0,6}?(状态|进展|…)&quot;  # 吃下「候选人王五现在进展到哪一步了」
@@ -1351,23 +1503,23 @@ r&quot;简历.{0,8}?(…|打.{0,2}?分)&quot;  # 吃下「这份简历请打个�
 「候选人」三个字出现在句子里，可能是查询意图，也可能只是宾语。
 把它和「候选人状态」放在同一权重里（M1~M3 就是这样），本质上是在说
 「出现即相关」——这是 BUG-005 的根因。</p>
-<h3>配套：命中说明写进账本</h3>
+<h3 id="配套-命中说明写进账本">配套：命中说明写进账本</h3>
 <p>每次选择都会记录「命中了哪个信号、得了几分」，例如：</p>
 <pre><code>工具命中: send_email=6 分，schedule_interview=4 分
 </code></pre>
 <p>理由：<strong>事后解释不清的选择，等于给调试留了个黑洞。</strong>
 BUG-004 就是靠账本的一条备注才被发现的。</p>
 <hr />
-<h2>4. 决策二：取消「高风险工具强制注入」</h2>
+<h2 id="4-决策二-取消-高风险工具强制注入">4. 决策二：取消「高风险工具强制注入」</h2>
 <p>这是本 ADR 的重点。</p>
-<h3>原来的做法与理由</h3>
+<h3 id="原来的做法与理由">原来的做法与理由</h3>
 <pre><code class="language-python"># M1~M3 的代码
 for spec in self._tools.values():
     if spec.risk == RISK_HIGH and spec.name not in picked:
         picked.append(spec)
 </code></pre>
 <p>当初的理由是：<strong>模型必须知道这些能力存在，否则会臆造工具（自己编一个不存在的能力去满足用户）。</strong></p>
-<h3>为什么不成立</h3>
+<h3 id="为什么不成立">为什么不成立</h3>
 <p>防臆造这件事，<strong>在 system prompt 里已经做了</strong>：</p>
 <blockquote>
 <p>需要调用清单以外的能力时，直接 FINISH 并说明不支持。</p>
@@ -1380,17 +1532,17 @@ for spec in self._tools.values():
    模型也可能顺手去发——每误触一次就弹一次人工确认，<strong>等于打断用户</strong>。</li>
 <li><strong>污染评测信号</strong>：工具列表里永远有高风险工具，让「是否误选」这类断言很难测准。</li>
 </ol>
-<h3>失败方向的取舍</h3>
+<h3 id="失败方向的取舍">失败方向的取舍</h3>
 <p>取消之后，万一某句话确实需要高风险工具但没匹配上（比如用户说「就这么定了」），
 模型会 FINISH 说明不支持。</p>
 <p><strong>这是可以接受的失败方向</strong>：宁可少做一步让人补一句，不可自作主张发一封收不回的邮件。
 这条性质和 FR-007（高风险动作先出草稿）是一致的。</p>
-<h3>保留的部分</h3>
+<h3 id="保留的部分">保留的部分</h3>
 <p>被选中（确实相关）的高风险工具，在工具分区预算不足时<strong>仍然不被裁剪</strong>——
 <strong>安全优先于预算</strong>这条没有变。变的只是「无条件入场券」。</p>
 <hr />
-<h2>5. 被否决的方案</h2>
-<h3>否决：embedding / 向量相似度</h3>
+<h2 id="5-被否决的方案">5. 被否决的方案</h2>
+<h3 id="否决-embedding-向量相似度">否决：embedding / 向量相似度</h3>
 <table>
 <thead>
 <tr>
@@ -1413,19 +1565,19 @@ for spec in self._tools.values():
 </tr>
 </tbody>
 </table>
-<h3>否决：LLM 路由器（用模型选工具）</h3>
+<h3 id="否决-llm-路由器-用模型选工具">否决：LLM 路由器（用模型选工具）</h3>
 <p>同上，外加多一次 LLM 调用（成本与延迟翻倍）。</p>
 <p><strong>但这两条不是永久否决。</strong> 见第 7 节的推翻条件。</p>
 <hr />
-<h2>6. 验证</h2>
-<h3>6.1 评测集回归</h3>
+<h2 id="6-验证">6. 验证</h2>
+<h3 id="6-1-评测集回归">6.1 评测集回归</h3>
 <pre><code>通过率 85% → 100%
 新增失败：无
 新修好  ：A05、A06
 </code></pre>
 <p>其中关键的负向验证：<strong>C 类 6 条全绿</strong>。
 说明取消强制注入之后，<strong>该拦的照样拦</strong>——安全性没有被削弱，减少的只是跟着准入的那部分冗余。</p>
-<h3>6.2 独立探针（自证不是过拟合）</h3>
+<h3 id="6-2-独立探针-自证不是过拟合">6.2 独立探针（自证不是过拟合）</h3>
 <p>改完策略让两条红用例变绿，本身不能证明修好了根因——
 <strong>把规则调得刚好能过已知用例，同样能变绿。</strong></p>
 <p>所以 <code>scripts/tool_select_probe.py</code> 用了一批<strong>措辞与 <code>evals/cases.py</code> 完全不同</strong>的句子重测：</p>
@@ -1437,7 +1589,7 @@ for spec in self._tools.values():
 <li><strong>防止矫枉过正的 inverse</strong>：<code>候选人王五现在进展到哪一步了</code> → 必须仍注入 <code>get_candidate</code></li>
 </ul>
 <p>第二类尤其重要：<strong>修误注入最容易犯的错，就是把正例也一起打死。</strong></p>
-<h3>6.3 上下文收益（忠实基线复算）</h3>
+<h3 id="6-3-上下文收益-忠实基线复算">6.3 上下文收益（忠实基线复算）</h3>
 <pre><code>平均降幅 52.8%，注入工具数 6.4 → 1.2 个
 </code></pre>
 <blockquote>
@@ -1445,15 +1597,15 @@ for spec in self._tools.values():
 这件事本身踩过一个坑，见调试日志 <code>BUG-006</code>。</p>
 </blockquote>
 <hr />
-<h2>7. 已知边界与推翻条件</h2>
-<h3>这套方案做不到的事</h3>
+<h2 id="7-已知边界与推翻条件">7. 已知边界与推翻条件</h2>
+<h3 id="这套方案做不到的事">这套方案做不到的事</h3>
 <ul>
 <li><strong>否定句</strong>：「先别发邮件，我一会自己通知」→ <code>发…邮件</code> 命中，会被误判为肯定意图。
   字面匹配的固有缺陷，<strong>不是实现 bug</strong>。</li>
 <li><strong>省略主语的承接</strong>：「就这么定了」→ 无强信号 → FINISH。属于上文依赖，需要会话状态参与判断。</li>
 <li><strong>同义改写</strong>：「招募启事」≠「招聘启事」。可以靠持续扩充 <code>strong</code> 缓解，但不能根治。</li>
 </ul>
-<h3>什么情况下应该推翻本 ADR</h3>
+<h3 id="什么情况下应该推翻本-adr">什么情况下应该推翻本 ADR</h3>
 <p>出现下列任一情况时，应改用 embedding 或 LLM 路由：</p>
 <ol>
 <li>工具数量增长到 <strong>30 个以上</strong>（手写规则维护不动了）</li>
@@ -1463,14 +1615,14 @@ for spec in self._tools.values():
 <p>届时正确做法是：把新方案做成<strong>可选开关</strong>，用同一套评测集 + 探针集跑对比，
 用 A 类指标决定胜负——而不是拍脑袋换。</p>
 <hr />
-<h2>8. 一句话总结</h2>
+<h2 id="8-一句话总结">8. 一句话总结</h2>
 <blockquote>
 <p>工具选择这件事上，<strong>「存在感」不需要靠无条件的入场券来保证，
 而应该由信号强度决定</strong>。省下来的 token 是顺带的收益，
 真正的收益是<strong>不再诱导模型去碰它本不该碰的高风险动作</strong>。</p>
 </blockquote>
 <hr />
-<h1>ADR-003：什么时候不该用 Dify（以及什么时候该用）</h1>
+<h1 id="adr-003-什么时候不该用-dify-以及什么时候该用">ADR-003：什么时候不该用 Dify（以及什么时候该用）</h1>
 <table>
 <thead>
 <tr>
@@ -1498,18 +1650,18 @@ for spec in self._tools.values():
 </tbody>
 </table>
 <hr />
-<h2>1. 背景（为什么要有这篇 ADR）</h2>
+<h2 id="1-背景-为什么要有这篇-adr">1. 背景（为什么要有这篇 ADR）</h2>
 <p>M5 设立一条<strong>对照轨</strong>：在 Dify 云端版（dify.ai）照着自研 harness 的 9 个工具、同一套提示词，搭一个等价的 HR 招聘 Agent，跑<strong>同一套 24 条评测集</strong>，看两条轨道差异在哪。</p>
 <p>设立对照轨的目的不是"证明 Dify 不行"——Dify 是成熟的编排平台，能极大缩短从 0 到 1 的时间。目的是<strong>证明选型判断力</strong>：在什么约束下自研 harness 是更对的那个选择，在什么约束下根本不该自己造轮子。</p>
 <p>本 ADR 是 M5 的落点文档。结论分两层：<strong>什么时候不该用 Dify（用自研）</strong> 和 <strong>什么时候该用 Dify（别自己造）</strong>。</p>
 <hr />
-<h2>2. 决策（一句话）</h2>
+<h2 id="2-决策-一句话">2. 决策（一句话）</h2>
 <blockquote>
 <p>当需求存在<strong>高风险动作需要代码级强制拦截</strong>、<strong>需要 span 级可回放定位故障</strong>、或<strong>工具是自研代码而非现成 HTTP 服务</strong>这三类约束中的任意一种时，Dify 的"软管控 + 会话级观测"模型会暴露短板，<strong>应来自研受控 harness</strong>；否则用 Dify 更快、更稳、更省。</p>
 </blockquote>
 <hr />
-<h2>3. 论据与证据</h2>
-<h3>论据一：控制强度 —— mandatory（代码强制）vs advisory（提示词建议）</h3>
+<h2 id="3-论据与证据">3. 论据与证据</h2>
+<h3 id="论据一-控制强度-mandatory-代码强制-vs-advisory-提示词建议">论据一：控制强度 —— mandatory（代码强制）vs advisory（提示词建议）</h3>
 <p><strong>自研 harness（mandatory）</strong></p>
 <p>门控写在 <code>harness/runner.py</code> 的框架主循环里，<strong>不依赖模型自觉</strong>：</p>
 <pre><code class="language-python"># harness/runner.py L186-202
@@ -1536,7 +1688,7 @@ if step.action in (ACTION_CALL_TOOL, ACTION_REQUEST_CONFIRM):
 </ul>
 <p><strong>结论（精确表述，不夸大）</strong>：不是"Dify 没安全"，而是 Dify 在这条轨道上提供的是 <strong>advisory（建议性）控制</strong>——安全靠提示词 + 模型自觉，且可调工具面含平台内置项；harness 提供的是 <strong>mandatory（强制性）控制</strong>——安全靠代码，删提示词也生效，且工具面完全由 <code>ToolRegistry</code> 显式注册。对发邮件 / 改生产数据 / 转账这类<strong>不可逆高风险动作</strong>，mandatory 是更稳的选择。</p>
 <hr />
-<h3>论据二：可观测性 —— span 级（可回放）vs 会话级（仅摘要）</h3>
+<h3 id="论据二-可观测性-span-级-可回放-vs-会话级-仅摘要">论据二：可观测性 —— span 级（可回放）vs 会话级（仅摘要）</h3>
 <p><strong>自研 harness（span 级）</strong></p>
 <p><code>harness/tracer.py</code> 每次运行一个 <code>trace_id</code>，span 类型覆盖 <code>run / plan / llm / tool_call / gate / respond</code>，每个 span 记输入、输出、耗时、token、状态。<code>summary()</code> 直接给可度量信号：</p>
 <pre><code class="language-python"># harness/tracer.py L155-168
@@ -1560,16 +1712,16 @@ if step.action in (ACTION_CALL_TOOL, ACTION_REQUEST_CONFIRM):
 </ul>
 <p><strong>结论（精确表述，不夸大）</strong>：不是"Dify 看不到工具调用"，而是 Dify 给的是<strong>传输时的流式事件</strong>（工具可见、但无类型、无门控、无状态机、不可回放）；harness 给的是<strong>持久化、带类型、可回放的 span 树</strong>（含 <code>gate_count</code> / <code>failed</code> / <code>repaired</code>）。当故障需要"定位到具体一次工具调用为什么会失败"时，流式事件不够用——尤其 <code>gate_count</code> 这类控制流断言完全无法从 Dify 取得。</p>
 <hr />
-<h3>论据三：工具接入模型 —— 自研代码 vs 必须包装成真实 HTTP API</h3>
+<h3 id="论据三-工具接入模型-自研代码-vs-必须包装成真实-http-api">论据三：工具接入模型 —— 自研代码 vs 必须包装成真实 HTTP API</h3>
 <p><strong>踩坑2（已确认）</strong>：Dify 点工具面板右上「+」进「创建自定义工具」，该框<strong>只接受 OpenAPI / Swagger schema</strong>，面向"调真实 HTTP API"。<strong>不能直接粘贴一段 mock / 自研代码</strong>。</p>
 <p>对策（已跑通）：把 <code>servers.url</code> 指向公共回显 <code>https://httpbin.org</code>，path <code>/anything/send_email</code>，无需自建服务器即把工具接进 Dify。</p>
 <p>对比 harness：<code>harness/tool_registry.py</code> 的 <code>ToolRegistry</code> 接收任意 Python 可调用对象（<code>spec.call(**args)</code>），9 个 HR 工具全是本地 mock，<code>hr_tools.py</code> 一行 <code>build_registry()</code> 即注册，零部署。</p>
 <p><strong>结论</strong>：Dify 接<strong>现成 HTTP 服务</strong>极顺；接<strong>自研逻辑 / mock / 还没暴露成服务的内部能力</strong>要先补一层 API 包装。harness 在这类"工具还在我代码里"的场景下零摩擦。</p>
 <hr />
-<h3>论据四（次要）：可回归性 —— 自带评测闭环</h3>
+<h3 id="论据四-次要-可回归性-自带评测闭环">论据四（次要）：可回归性 —— 自带评测闭环</h3>
 <p>harness 每层改动都能用 <code>scripts/run_evals.py</code>（24 条 × 3 轮 + baseline 回归）量化回归，M3→M4 就是靠它从 85% 拉到 100% 并自证没过拟合（探针 18/18）。Dify 工作流的"改完还安全吗"只能靠人工回归或另搭评测，没有内建的、可冻结基线的评测闭环。</p>
 <hr />
-<h2>4. 定量对比现状（诚实标注未完成部分）</h2>
+<h2 id="4-定量对比现状-诚实标注未完成部分">4. 定量对比现状（诚实标注未完成部分）</h2>
 <table>
 <thead>
 <tr>
@@ -1633,7 +1785,7 @@ if step.action in (ACTION_CALL_TOOL, ACTION_REQUEST_CONFIRM):
 <p><strong>怎么读这个数</strong>：Dify 在内容质量上 5/6 略高于 harness 3/6，但这是<strong>所选模型与提示词</strong>的差异（Dify 侧用 dify.ai 控制台确认的 <code>DeepSeek V4.1 Flash</code>——模型市场显示名，非官方 API 端点；harness 用官方 <code>deepseek-chat</code>，两者<strong>并非同一模型端点</strong>），<strong>不是引擎能力差异</strong>——harness 的卖点从来不是"写得更漂亮"，而是 mandatory 门控 / span 级可观测 / 自研代码工具。Dify 内容质量更高，反而<strong>强化</strong>了本文结论："低风险内容生成用 Dify 更快更好；高风险可控动作才需自研 harness"。</p>
 <p>Dify 对照轨仅搭 1 个自定义工具（send_email）+ 平台内置 shell_run，<strong>未接知识库</strong>——故 B05 考验的是模型"不编造"能力而非检索；与 harness 侧（接 mock KB）非完全同构对比，已如实标注。不把定性结论伪装成定量胜出。</p>
 <hr />
-<h2>5. 后果（选错会失去 / 付出什么）</h2>
+<h2 id="5-后果-选错会失去-付出什么">5. 后果（选错会失去 / 付出什么）</h2>
 <p><strong>选 harness（自研）会付出的代价</strong></p>
 <ul>
 <li>要自己写引擎、状态机、Trace、门控——工作量远大于在 Dify 拖节点。</li>
@@ -1648,14 +1800,14 @@ if step.action in (ACTION_CALL_TOOL, ACTION_REQUEST_CONFIRM):
 <li>改动失去内建可冻结基线的回归评测。</li>
 </ul>
 <hr />
-<h2>6. 被否决的方案</h2>
+<h2 id="6-被否决的方案">6. 被否决的方案</h2>
 <ul>
 <li><strong>方案 A：用 Dify 替代 harness 做主轨</strong>。否决理由：主轨要展示的是"引擎可控性"，而 Dify 的管控是 advisory，无法用评测证明"模型想违规也违规不了"，与项目北极星（可控完成率 / 失败可定位率）冲突。</li>
 <li><strong>方案 B：两条轨道都不要，纯用 Dify</strong>。否决理由：失去 M5 要证明的"选型判断力"证据，也失去 span 级观测这个面试可讲的设计落点。</li>
 <li><strong>方案 C：在 Dify 里手写代码节点做门控</strong>。云端版 Agent 模式不支持直接贴代码（踩坑2），需自建 API 服务，成本接近自研且更绕。</li>
 </ul>
 <hr />
-<h2>7. 决策规则（给面试官的"选型检查表"）</h2>
+<h2 id="7-决策规则-给面试官的-选型检查表">7. 决策规则（给面试官的"选型检查表"）</h2>
 <table>
 <thead>
 <tr>
@@ -1704,7 +1856,7 @@ if step.action in (ACTION_CALL_TOOL, ACTION_REQUEST_CONFIRM):
 </table>
 <p>一句话：<strong>Dify 是"快上线"的默认解；当出现"不可逆动作 + 必须拦得住 + 出事要能定位到那一步"时，自研受控 harness 才值回票价。</strong></p>
 <hr />
-<h2>8. 推翻条件（什么情况下本 ADR 要重议）</h2>
+<h2 id="8-推翻条件-什么情况下本-adr-要重议">8. 推翻条件（什么情况下本 ADR 要重议）</h2>
 <ol>
 <li>Dify 后续版本在 Agent 模式加了<strong>原生工具调用前确认 / 代码级门控</strong>（API 可断言），则论据一弱化，需重测。</li>
 <li>Dify 开放<strong>工具调用 / token / span 级</strong>日志 API（非仅会话级），则论据二弱化。</li>
@@ -1712,7 +1864,7 @@ if step.action in (ACTION_CALL_TOOL, ACTION_REQUEST_CONFIRM):
 <li>拿到 <code>DIFY_API_KEY</code> 跑通 head-to-head 后，若 Dify 定量通过率与 harness 持平且管控可接受，则本 ADR 结论从"不该用"降级为"可平替，按团队熟悉度选"。</li>
 </ol>
 <hr />
-<h2>9. 待核实清单（首次联调按实测校正，不当前置结论）</h2>
+<h2 id="9-待核实清单-首次联调按实测校正-不当前置结论">9. 待核实清单（首次联调按实测校正，不当前置结论）</h2>
 <ul>
 <li>✅ <strong>已校正（streaming 暴露工具调用）</strong>：原假设"Dify 完全看不到工具调用"已推翻——<code>chat-messages</code> 的 <strong>Agent 应用只支持 streaming</strong>，且 streaming 的 <code>agent_thought</code> 事件携带 <code>tool</code> / <code>tool_input</code> / <code>observation</code>。论据二已据实测改写为"流式事件可见 vs durable span 树"。（<code>[待核实: Dify 官方 API 文档]</code> 仍建议核对各事件的完整 schema 与字段含义）</li>
 <li>✅ <strong>已校正（无 mandatory 门控）</strong>：Dify Agent App <strong>只支持 streaming</strong>，streaming 响应里<strong>没有 gate / confirmation 信号字段</strong>；门控纯靠提示词（踩坑4）。论据一从"advisory"坐实为"API 侧无强制门控信号"。</li>
@@ -1721,5 +1873,6 @@ if step.action in (ACTION_CALL_TOOL, ACTION_REQUEST_CONFIRM):
 <li><code>[待核实]</code> <code>shell_run</code> 这类<strong>平台内置工具</strong>在 Agent 模式下的可调范围与开关项——本 ADR 仅实测到它会被自动调用，其完整清单与禁用方式以 Dify 官方文档为准。</li>
 </ul>
 </article>
+</div>
 </body>
 </html>
