@@ -34,6 +34,7 @@ DELIVERABLES = {
     "report.html": ("评测报告 + Dify 对比", ["reports/dify_vs_harness.md"]),
     "debug.html": ("调试日志", ["docs/99-问题与解决记录.md"]),
     "failure-modes.html": ("失败模式手册", ["docs/05-失败模式手册.md"]),
+    "prompt-iteration.html": ("Prompt 迭代记录", ["docs/06-Prompt迭代记录.md"]),
 }
 
 DOC_CSS = """

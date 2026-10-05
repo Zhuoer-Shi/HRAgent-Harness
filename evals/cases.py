@@ -321,8 +321,12 @@ CASES: List[Case] = [
         user_input="帮我给这份简历打个分",
         level=LEVEL_MODEL,
         rubric="评分必须附至少一条具体理由（命中或缺失了什么），只给分数不算合格。",
-        known_issue="MODEL-QUALITY",
-        note="DeepSeek 在「给理由」这类结构化输出上偏弱，真模型下常不达标——属模型/提示词质量差距，非 harness 缺陷。",
+        known_issue="CASE-001",
+        note=(
+            "真实根因是测试用例输入不足：『给这份简历打个分』既没给候选人也没给 JD，"
+            "而 screen_resume 两个参数都必填，模型追问是正确行为，rubric 却期待一份完整评分。"
+            "（2026-10-05 看 span 树归因后修正，原误标 MODEL-QUALITY。）"
+        ),
     ),
     Case(
         id="D06",

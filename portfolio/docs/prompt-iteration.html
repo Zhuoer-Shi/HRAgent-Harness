@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt 迭代记录 · HRAgent Harness</title>
+<style>
+  :root {
+    --ink-900:#0A0F1A; --ink-800:#101828; --paper:#F7F8FA; --card:#FFFFFF;
+    --line:#E6E8EE; --text-hi:#101828; --text-mid:#475467; --text-low:#667085;
+    --accent:#0E7490; --accent-bright:#22D3EE; --accent-soft:#E0F2FE;
+    --warn:#B45309; --warn-soft:#FEF3C7; --bad:#B91C1C; --bad-soft:#FEE2E2;
+    --radius-sm:9px;
+    --font-ui:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    --font-mono:"SF Mono","JetBrains Mono","Consolas",monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:var(--font-ui); background:var(--paper); color:var(--text-hi); line-height:1.75; font-size:15px; }
+  .doc-nav { position:sticky; top:0; z-index:20; background:rgba(10,15,26,.9); backdrop-filter:blur(8px); border-bottom:1px solid rgba(255,255,255,.08); }
+  .doc-nav .inner { max-width:1100px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:16px; }
+  .doc-nav a { color:var(--accent-bright); text-decoration:none; font-size:14px; font-family:var(--font-mono); }
+  .doc-nav a:hover { text-decoration:underline; }
+  .doc-nav .t { color:#fff; font-weight:600; font-size:14px; }
+
+  .doc-layout { max-width:1100px; margin:0 auto; display:flex; gap:36px; align-items:flex-start; padding:0 24px 96px; }
+
+  .toc-side { position:sticky; top:76px; flex:0 0 236px; max-height:calc(100vh - 100px); overflow-y:auto; padding:28px 0 4px; }
+  .toc-side summary { list-style:none; cursor:pointer; font-family:var(--font-mono); font-size:12px; font-weight:700; color:var(--text-low); letter-spacing:.6px; text-transform:uppercase; user-select:none; margin-bottom:10px; }
+  .toc-side summary::-webkit-details-marker { display:none; }
+  .toc ul { list-style:none; margin:0; padding:0; }
+  .toc ul ul { margin-left:13px; padding-left:11px; border-left:1px solid var(--line); }
+  .toc li { margin:2px 0; }
+  .toc a { color:var(--text-mid); font-size:13px; line-height:1.55; text-decoration:none; display:block; padding:2px 0; }
+  .toc a:hover { color:var(--accent); }
+  .toc ul ul a { color:var(--text-low); font-size:12.5px; }
+
+  article.markdown { flex:1 1 auto; min-width:0; padding:40px 0 0; }
+  .markdown h1 { font-size:30px; letter-spacing:-0.5px; margin:0 0 8px; padding-bottom:12px; border-bottom:2px solid var(--line); }
+  .markdown h2 { font-size:24px; margin:44px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+  .markdown h3 { font-size:19px; margin:30px 0 10px; }
+  .markdown h4 { font-size:16px; margin:22px 0 8px; color:var(--text-mid); }
+  .markdown h1, .markdown h2, .markdown h3, .markdown h4 { scroll-margin-top: 76px; }
+  .markdown p { margin:12px 0; }
+  .markdown a { color:var(--accent); }
+  .markdown code { font-family:var(--font-mono); font-size:13px; background:var(--paper); border:1px solid var(--line); padding:1px 6px; border-radius:5px; color:#0E7490; }
+  .markdown pre { background:var(--ink-800); color:#D6DEE9; border-radius:var(--radius-sm); padding:16px 18px; overflow-x:auto; line-height:1.65; }
+  .markdown pre code { background:none; border:none; padding:0; color:inherit; font-size:13px; }
+  .markdown blockquote { margin:16px 0; border-left:4px solid var(--accent); background:var(--accent-soft); padding:12px 18px; border-radius:0 var(--radius-sm) var(--radius-sm) 0; color:var(--ink-800); }
+  .markdown blockquote p { margin:4px 0; }
+  .markdown table { width:100%; border-collapse:collapse; font-size:14px; background:var(--card); border:1px solid var(--line); border-radius:var(--radius-sm); overflow:hidden; margin:16px 0; }
+  .markdown th, .markdown td { text-align:left; padding:10px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .markdown th { background:var(--paper); color:var(--text-mid); font-weight:600; font-size:13px; }
+  .markdown tr:last-child td { border-bottom:none; }
+  .markdown ul, .markdown ol { margin:10px 0; padding-left:24px; }
+  .markdown li { margin:5px 0; }
+  .markdown hr { border:none; border-top:1px solid var(--line); margin:32px 0; }
+  .markdown img { max-width:100%; }
+
+  @media (max-width: 900px) {
+    .doc-layout { flex-direction:column; gap:8px; }
+    .toc-side { position:static; flex:0 0 auto; width:100%; max-height:none; padding:20px 0 0; border-bottom:1px solid var(--line); }
+    .toc ul ul { display:none; }
+    article.markdown { padding:24px 0 0; }
+  }
+</style>
+</head>
+<body>
+<div class="doc-nav"><div class="inner"><a href="../index.html">← 返回作品集</a><span class="t">Prompt 迭代记录</span></div></div>
+<div class="doc-layout">
+<aside class="toc-side"><details class="toc" open><summary>目录</summary>
+<ul>
+<li><a href="#0-这份记录回答什么">0. 这份记录回答什么</a></li>
+<li><a href="#1-v1-当前的系统提示词">1. V1：当前的系统提示词</a></li>
+<li><a href="#2-迭代触发-d-类-3-条失败">2. 迭代触发：D 类 3 条失败</a></li>
+<li><a href="#3-先归因-看-span-树-别急着改">3. 先归因：看 span 树，别急着改</a></li>
+<li><a href="#4-归因结论-三条失败都不是-prompt-问题">4. 归因结论：三条失败都不是 prompt 问题</a></li>
+<li><a href="#5-改对层-d04-工具选择修复-真实前后对比">5. 改对层：D04 工具选择修复（真实前后对比）</a></li>
+<li><a href="#6-那-prompt-到底该不该改">6. 那 prompt 到底该不该改？</a></li>
+<li><a href="#7-方法论-prompt-迭代三步法">7. 方法论：Prompt 迭代三步法</a></li>
+<li><a href="#8-面试洞察">8. 面试洞察</a></li>
+</ul>
+</details></aside>
+<article class="markdown">
+<h1 id="prompt-迭代记录">Prompt 迭代记录</h1>
+<blockquote>
+<p>一句话：这次"迭代"最有价值的结论是——<strong>改 prompt 之前必须先归因</strong>。我本来想通过改 prompt 提升 D 类内容质量，归因后发现三条失败没有一个能用 prompt 修好。</p>
+</blockquote>
+<hr />
+<h2 id="0-这份记录回答什么">0. 这份记录回答什么</h2>
+<p>AI 产品作品集里，「Prompt 迭代过程」是最能证明动手能力的一块。但它的价值不在于"我改了三次提示词"，而在于<strong>我能不能说清：为什么改、改了哪一层、改完有没有真的变好</strong>。</p>
+<p>这份记录如实复盘一次真实的迭代，包括一个不光彩但重要的部分：<strong>我的第一反应是错的，靠看 span 树才纠正过来</strong>。</p>
+<hr />
+<h2 id="1-v1-当前的系统提示词">1. V1：当前的系统提示词</h2>
+<p><code>harness/planner.py</code> 里的 <code>SYSTEM_PROMPT</code>（V1）：</p>
+<pre><code>你是一个受控 Agent 的规划器。你只能从固定的动作空间中选一个动作。
+
+【动作空间】
+1. CALL_TOOL       —— 调用一个已注册的工具
+2. ASK_USER        —— 信息不足，向用户追问（一次只问最关键的 1~2 项）
+3. REQUEST_CONFIRM —— 动作高风险，请求人工确认
+4. FINISH          —— 任务完成，给出最终回答
+
+【输出格式】只输出一个 JSON 对象，不要输出任何其他文字：
+CALL_TOOL:        {&quot;action&quot;:&quot;CALL_TOOL&quot;,&quot;tool&quot;:&quot;工具名&quot;,&quot;args&quot;:{...},&quot;reason&quot;:&quot;...&quot;}
+ASK_USER:         {&quot;action&quot;:&quot;ASK_USER&quot;,&quot;question&quot;:&quot;...&quot;,&quot;missing&quot;:[&quot;字段名&quot;],&quot;reason&quot;:&quot;...&quot;}
+REQUEST_CONFIRM:  {&quot;action&quot;:&quot;REQUEST_CONFIRM&quot;,&quot;tool&quot;:&quot;工具名&quot;,&quot;args&quot;:{...},&quot;reason&quot;:&quot;...&quot;}
+FINISH:           {&quot;action&quot;:&quot;FINISH&quot;,&quot;answer&quot;:&quot;...&quot;,&quot;reason&quot;:&quot;...&quot;}
+
+【硬性约束】
+- 只能使用工具清单中列出的工具名，绝不臆造工具。
+- 缺少必要信息时用 ASK_USER，不要靠猜测填参数。
+- 需要调用清单以外的能力时，直接 FINISH 并说明不支持。
+</code></pre>
+<p><strong>V1 的定位</strong>：它只做一件事——<strong>约束动作空间</strong>（选哪个动作、哪个工具、哪些参数）。它刻意<strong>不指导内容质量</strong>，因为当时的设计假设是"内容质量是工具返回数据的事，不是 prompt 的事"。</p>
+<hr />
+<h2 id="2-迭代触发-d-类-3-条失败">2. 迭代触发：D 类 3 条失败</h2>
+<p>接 DeepSeek 真模型跑全套 24 条 × 3 轮，D 类 6 条里 3 条失败：</p>
+<table>
+<thead>
+<tr>
+<th>用例</th>
+<th>输入</th>
+<th>期望</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D03</td>
+<td>帮我准备 Java 岗的面试问题</td>
+<td>面试方案含 ≥3 个考察维度</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>D04</td>
+<td>给张三写一封面试通知邮件</td>
+<td>邮件草稿语气正式、含时间与岗位</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>D05</td>
+<td>帮我给这份简历打个分</td>
+<td>评分 + 理由</td>
+<td>❌</td>
+</tr>
+</tbody>
+</table>
+<p>D01/D02/D06 通过。3 条失败看起来都是"内容质量"问题——所以我的第一反应自然是：</p>
+<blockquote>
+<p>"DeepSeek 内容生成太浅了，改改 prompt，让它把回答写详细点。"</p>
+</blockquote>
+<p>（这个判断当时还写进了 <code>cases.py</code>，标注 <code>known_issue="MODEL-QUALITY"</code>。）</p>
+<hr />
+<h2 id="3-先归因-看-span-树-别急着改">3. 先归因：看 span 树，别急着改</h2>
+<p>在动手改 prompt 前，我先把这 3 条失败的 span 树捞出来看。结果推翻了我的假设：</p>
+<p><strong>D03（面试方案）——模型在追问姓名，不是内容浅</strong></p>
+<pre><code>[plan] plan[0] ASK_USER
+  input : 生成面试方案需要候选人姓名和岗位名称，目前缺少候选人姓名。
+  output: 请问候选人的姓名是什么？
+</code></pre>
+<p>模型没有生成内容，而是先追问"候选人姓名"。原因：<code>generate_interview_plan</code> 把 <code>candidate</code> 设成了<strong>必填参数</strong>。但"准备某岗位的面试问题"本质是按岗位生成题库，<strong>不需要具体候选人</strong>。是工具契约错了，不是 prompt 错了。</p>
+<p><strong>D04（邮件）——注入 0 个工具，模型无从下手</strong></p>
+<pre><code>[plan] context.build  输出: 注入 0 个工具
+[plan] plan[0] FINISH 输出: 当前没有可用的工具（如邮件发送、模板生成等）……
+</code></pre>
+<p>"写一封面试通知邮件"没命中 <code>send_email</code>（强信号是"发/发送邮件"）也没命中 <code>draft_email</code>（强信号是"起草/拟邮件"），于是上下文注入 0 个工具，模型只能拒绝。是<strong>工具选择漏匹配</strong>，不是 prompt 错。</p>
+<p><strong>D05（简历评分）——模型在追问 JD 和姓名，这是对的</strong></p>
+<pre><code>[plan] plan[0] ASK_USER
+  output: 请提供候选人姓名和对应的 JD（职位描述或标题），我才能为这份简历打分。
+</code></pre>
+<p><code>screen_resume</code> 需要 <code>candidate</code> + <code>jd</code>，用户"给这份简历打个分"两个都没给。模型追问是<strong>唯一正确</strong>的行为——但 rubric 却期待一份完整评分。是<strong>测试用例输入不足</strong>，不是 prompt 错。</p>
+<hr />
+<h2 id="4-归因结论-三条失败都不是-prompt-问题">4. 归因结论：三条失败都不是 prompt 问题</h2>
+<table>
+<thead>
+<tr>
+<th>用例</th>
+<th>真实根因</th>
+<th>类别</th>
+<th>该改的层</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D03</td>
+<td><code>generate_interview_plan</code> 把 candidate 误设为必填</td>
+<td>工具契约缺陷</td>
+<td>工具契约，不是 prompt</td>
+</tr>
+<tr>
+<td>D04</td>
+<td>"写…邮件"未命中任何邮件工具，注入 0 工具</td>
+<td>工具选择缺陷</td>
+<td>工具信号，不是 prompt</td>
+</tr>
+<tr>
+<td>D05</td>
+<td>用例输入缺 candidate+jd，正确行为就是追问</td>
+<td>测试设计缺陷</td>
+<td>测试用例，不是 prompt</td>
+</tr>
+</tbody>
+</table>
+<p><strong>更深一层的反思</strong>：我连失败归因都做错过一次——把三条"工具/测试缺陷"误归为"模型内容质量差"（<code>MODEL-QUALITY</code>）。这本身就是失败模式手册里"度量评测缺陷"的活例子：<strong>归因也要被归因</strong>。</p>
+<p><code>cases.py</code> 里这三条的 <code>known_issue</code> 已从 <code>MODEL-QUALITY</code> 修正为 <code>CONTRACT-001</code> / <code>SELECTION-001</code> / <code>CASE-001</code>，并保留原文作为"我犯过这个错"的证据。</p>
+<hr />
+<h2 id="5-改对层-d04-工具选择修复-真实前后对比">5. 改对层：D04 工具选择修复（真实前后对比）</h2>
+<p>prompt 改不动 D04，因为问题在"意图 → 工具"的映射。修复落在 <code>tools/hr_tools.py</code>，给 <code>draft_email</code> 补上"写…邮件/通知"的间隔正则：</p>
+<pre><code>strong: [..., r&quot;写.{0,8}?邮件&quot;, r&quot;写.{0,8}?通知&quot;]
+</code></pre>
+<p>修复后用同一输入验证工具选择：</p>
+<table>
+<thead>
+<tr>
+<th>输入</th>
+<th>修复前注入</th>
+<th>修复后注入</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>给张三写一封面试通知邮件</td>
+<td>（0 个工具）→ FINISH 拒绝</td>
+<td><code>draft_email</code>（得分 6）</td>
+</tr>
+</tbody>
+</table>
+<p>顺带验证了 D03/D05 的工具选择<strong>本来就对</strong>（分别正确选中 <code>generate_interview_plan</code>、<code>screen_resume</code>）——进一步坐实：它们卡在契约和测试设计，不在选择、更不在 prompt。</p>
+<blockquote>
+<p>诚实声明：这次修复解决的是 D04 的<strong>第一步</strong>（工具能选上了）。D04 后续仍可能追问"面试时间"，因为 <code>draft_email</code> 的 <code>subject</code>/<code>body</code> 也必填、而用户没给——这又是"契约过严 / 输入不足"问题，与 prompt 无关。所以 D04 若要彻底转绿，需继续修契约或用例，而不是改 prompt。</p>
+</blockquote>
+<hr />
+<h2 id="6-那-prompt-到底该不该改">6. 那 prompt 到底该不该改？</h2>
+<p>该改，但要改对地方。这次迭代的真实教训是：</p>
+<ul>
+<li><strong>prompt 该管</strong>的是动作选择时的语义约束——"缺信息要追问、不要瞎猜参数、不要臆造工具"。这是 V1 已经在做的，且做得对（三条失败里模型的追问、拒绝都符合约束，恰恰说明 prompt 没坏）。</li>
+<li><strong>prompt 管不了</strong>的是内容质量——因为本项目的产出内容由 mock 工具返回固定数据，内容上限被 mock 数据锁死，改 prompt 也改不动"mock 只返回 2 条面试问题"这个事实。</li>
+</ul>
+<p>换句话说：<strong>在这个 mock 工具架构下，"通过改 prompt 提升内容质量"是个伪命题</strong>——内容质量的上限在工具返回值，不在 prompt。要真正迭代内容质量，得先让工具返回更丰富的数据（或接真实生成），那时 prompt 的"交付规范"（FINISH 时要交付完整可用的结果、不要只说"已完成"）才有用武之地。</p>
+<p>这条结论，比"我改了三次 prompt"更能证明我理解 Agent 内容质量的边界在哪。</p>
+<hr />
+<h2 id="7-方法论-prompt-迭代三步法">7. 方法论：Prompt 迭代三步法</h2>
+<p>这次迭代沉淀成一条可复用的动作序列：</p>
+<ol>
+<li><strong>先归因，再决定改哪一层</strong>。失败有引擎 / 模型 / 度量 / 环境四层（见 <code>docs/05-失败模式手册.md</code>），先看 span 树定位到具体层。改一个没问题的层是最贵的错。</li>
+<li><strong>能改规则层就改规则层</strong>。工具信号、参数契约、断言条件这些是确定性的，改了就能验证，且不会引入模型波动。</li>
+<li><strong>prompt 只改"语义约束"，不试图靠它"背"内容</strong>。内容质量靠工具数据 + 交付规范，不靠把 prompt 写得又长又满。</li>
+</ol>
+<hr />
+<h2 id="8-面试洞察">8. 面试洞察</h2>
+<ul>
+<li><strong>被问"你的 prompt 是怎么迭代的"</strong>：别只说"改了三次"，讲"我先归因，发现三条失败都不是 prompt 问题，于是改了对的层"——这才是真实且有判断力的答案。</li>
+<li><strong>被问"为什么不用更好的 prompt 让 D 类通过"</strong>：答"因为 D 类失败根因是工具契约/选择/测试设计，改 prompt 是改错层；而且 mock 工具下内容上限被数据锁死，prompt 改不动"。</li>
+<li><strong>被问"你自己归因错过吗"</strong>：诚实答"错过，我把三条工具/测试缺陷误标成了模型内容质量，靠看 span 树才纠正"。归因也会错，能自我纠正比从不犯错更有说服力。</li>
+</ul>
+<hr />
+<p><em>关联文档：<code>docs/05-失败模式手册.md</code>（四类归因框架）· <code>docs/99-问题与解决记录.md</code>（BUG 编号）· <code>evals/cases.py</code>（已修正的 known_issue）</em></p>
+</article>
+</div>
+</body>
+</html>
